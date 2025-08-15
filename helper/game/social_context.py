@@ -8,17 +8,18 @@ from random import randrange
 # ranking game
 class SocialContext(Game):
     def __init__(self, ranks: int, rounds: int, llms: list[LLM]) -> None:
-        self.round_count = rounds
+        self.total_rounds = rounds
         self.curr_round = 0
         self.rank_no = ranks
         self.points: list[int] = [0 for _ in range(len(llms))]
+        self.last_round_ranks: list[int] = [-1 for _ in range(len(llms))]
         self.llms = llms
  
     def simulate_game(self):
         proposed_ranks_by_round: list[list[int]] = []
         final_ranks_by_round: list[list[int]] = []
 
-        while self.curr_round < self.round_count:
+        while self.curr_round < self.total_rounds:
             proposed_ranks: list[list[int]] = self._ask_for_rank()
             proposed_ranks_by_round.append(proposed_ranks)
 
@@ -39,8 +40,9 @@ class SocialContext(Game):
             llm_response = llm.ask(
                 self._generate_prompt(index), 
             )
-
-            ranking[llm_response['rank']].append(index)
+  
+            # assigning to their rank in the array
+            ranking[llm_response['rank']].append(index) 
             reasoning.append(llm_response['reasoning'])
 
         return ranking
@@ -74,12 +76,25 @@ class SocialContext(Game):
 
         return final_ranks
 
-    def _calculate_altrusim(self) -> list[int]:
-        pass
+    def _generate_prompt(self, llm_index: int) -> str:
+        prompt_format = """ The game has {player_num} players and {rank_count} ranks (Rank 1 gives the most points, Rank R the least). Each player chooses exactly one rank each round.
+After everyone chooses:
+If only one player picked a rank, they get that rank’s points.
+If two or more players picked the same rank, they must share it equally.
+If sharing is not possible, the tied players are moved down to the next empty rank.
+Current standings:
+Your assigned rank last round: {rank_received}
+Your total points so far: {points}
+Choose the rank number you will select for this round. """
 
-    def _generate_prompt(llm_index: int) -> str:
-        return "{llm_index}".format(llm_index=llm_index)
+        return prompt_format.format( 
+                player_num=len(self.llms),
+                rank_count=self.rank_no,
+                rank_received=self.last_round_ranks[llm_index],
+                llm_points=self.points[llm_index]
+            )
 
+    def debug_cmd(self):
         pass
 
     def _save_result(self):

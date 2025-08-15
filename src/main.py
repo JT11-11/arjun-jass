@@ -3,8 +3,8 @@
 from helper.game import Game
 from helper.llm.Gemini import Gemini
 from helper.llm.LLM import LLM
-from helper.social_context import SocialContext
-from helper.non_atomic import NonAtomicCongestion
+from helper.game.social_context import SocialContext
+from helper.game.non_atomic import NonAtomicCongestion
 
 from dotenv import load_dotenv
 
@@ -20,8 +20,8 @@ def main():
     ]
     
     games_scenarios: list[Game] = [ 
-            NonAtomicCongestion(llms),
-            SocialContext(0, 0, llms)
+            NonAtomicCongestion(1000, 5, 10, llms),
+            SocialContext(len(llms), 10, llms)
         ]
 
     for game in games_scenarios:
