@@ -1,10 +1,11 @@
 from abc import ABC
-from typing_extensions import Generic
 
-class LLM(ABC, Generic[T]):
+class LLM(ABC):
     def __init__(self) -> None:
-
         pass
 
-    def ask(self, prompt, format) -> any:
+    def generate_new_model(self) -> None:
         pass
+
+    def ask(self, prompt) -> tuple[int, str]:
+        return (0, "")

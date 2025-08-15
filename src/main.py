@@ -1,24 +1,31 @@
 #all the main code goes here...
 
 from helper.game import Game
+from helper.llm.Gemini import Gemini
+from helper.llm.LLM import LLM
 from helper.social_context import SocialContext
 from helper.non_atomic import NonAtomicCongestion
 
+from dotenv import load_dotenv
 
 def main():
+
+    load_dotenv()
+
     print("Simulations have started")
     print("Currently Running games")
+
+    llms: list[LLM] = [
+            Gemini()
+    ]
     
-    games_scenarios: list[list[Game]] = [
-            [NonAtomicCongestion()],
-            [SocialContext(0, 0)]
+    games_scenarios: list[Game] = [ 
+            NonAtomicCongestion(llms),
+            SocialContext(0, 0, llms)
         ]
 
     for game in games_scenarios:
-        for scenario in game:
-            scenario.simulate_game()
-
-
+        game.simulate_game()
 
 if __name__ == "__main__":
     main()
