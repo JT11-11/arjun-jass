@@ -1,4 +1,4 @@
-from helper.game import Game
+from helper.game.game import Game
 
 # public goods game
 class NonAtomicCongestion(Game):
@@ -6,7 +6,6 @@ class NonAtomicCongestion(Game):
         self.fish_num = init_fish_num    
         self.fishermen_num = 10000
         self.consumption_limit = max_consumption
-        self.altrustic_index = altruism_index
         self.total_rounds = total_rounds
         self.curr_round = 0
         self.llms = llms

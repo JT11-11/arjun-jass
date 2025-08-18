@@ -1,4 +1,4 @@
-from helper.game import Game
+from helper.game.game import Game
 from helper.llm.LLM import LLM
 
 from google.genai import types
@@ -14,6 +14,7 @@ class SocialContext(Game):
         self.points: list[int] = [0 for _ in range(len(llms))]
         self.last_round_ranks: list[int] = [-1 for _ in range(len(llms))]
         self.llms = llms
+        print(self.points)
  
     def simulate_game(self):
         proposed_ranks_by_round: list[list[int]] = []
@@ -25,6 +26,8 @@ class SocialContext(Game):
 
             final_rankings: list[int] = self._resolve_congestion(proposed_ranks)
             final_ranks_by_round.append(final_rankings)
+
+            self.last_round_ranks = list(map(lambda x: x+1, final_rankings))
             
             self.curr_round += 1
 
@@ -42,7 +45,7 @@ class SocialContext(Game):
             )
   
             # assigning to their rank in the array
-            ranking[llm_response['rank']].append(index) 
+            ranking[llm_response['value']-1].append(index) 
             reasoning.append(llm_response['reasoning'])
 
         return ranking
@@ -84,7 +87,7 @@ If two or more players picked the same rank, they must share it equally.
 If sharing is not possible, the tied players are moved down to the next empty rank.
 Current standings:
 Your assigned rank last round: {rank_received}
-Your total points so far: {points}
+Your total points so far: {llm_points}
 Choose the rank number you will select for this round. """
 
         return prompt_format.format( 
