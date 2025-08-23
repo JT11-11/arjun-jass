@@ -57,9 +57,7 @@ class SocialContext(Game):
             # only one person chose this rank
             if len(llm_in_rank) == 1:
                 final_ranks[rank] = llm_in_rank[0]
-                break
 
-            # shift by one
             if len(llm_in_rank) == 0:
                 for ranks in range(rank, self.rank_no-1):
                     proposed_ranks[ranks] = proposed_ranks[ranks+1]
