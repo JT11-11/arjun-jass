@@ -17,7 +17,7 @@ class NonAtomicCongestion(Game):
         self.quitting_rate = 0.1       # fishermen leaving rate due to lack of fish
 
     def simulate_game(self):
-        while self.curr_round < self.total_rounds or self.fish_num > 0:
+        while self.curr_round < self.total_rounds and self.fish_num > 0:
             llm_consumptions = self._ask_for_consumption()
 
             self._next_fish_gen()
