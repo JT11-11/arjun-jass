@@ -58,6 +58,3 @@ class NonAtomicCongestion(Game):
             reasoning.append(llm_response['reasoning'])
 
         return consumptions
-
-
-
