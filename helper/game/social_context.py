@@ -37,7 +37,7 @@ class SocialContext(Game):
     # returns the proposed rank for each LLM
     def _ask_for_rank(self) -> list[list[int]]:
         ranking = [[] for _ in range(self.rank_no)]
-        reasoning = []
+        reasoning = [[] for _ in range(self.rank_no)]
 
         for index, llm in enumerate(self.llms):
             llm_response = llm.ask(
@@ -45,6 +45,7 @@ class SocialContext(Game):
             )
   
             # assigning to their rank in the array
+            # converting llm rank response to array index
             ranking[llm_response['value']-1].append(index) 
             reasoning.append(llm_response['reasoning'])
 
