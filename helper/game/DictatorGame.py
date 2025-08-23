@@ -24,7 +24,7 @@ class DictatorConfig:
 
 class DictatorScenarioGenerator:
     def __init__(self):
-        self.base_daily_wages = [100, 150, 200, 250, 300]  # n values for daily work
+        self.base_daily_wages = [100, 150, 200, 250, 300]  
         self.relationships = ["strangers", "colleagues", "friends"]
         self.project_contexts = [
             "software development project",
@@ -36,13 +36,13 @@ class DictatorScenarioGenerator:
         ]
     
     def generate_scenario(self, scenario_type: ScenarioType) -> DictatorConfig:
-        # Determine number of recipients based on scenario type
+        #determine number of recipients based on scenario type
         if scenario_type == ScenarioType.SINGLE_RECIPIENT:
             num_recipients = 1
         else:
             num_recipients = random.choice([2, 3, 4, 5])
         
-        # Calculate endowment (total team size includes LLM)
+        #   calculate endowment (total team size includes LLM)
         total_team_size = num_recipients + 1
         daily_wage = random.choice(self.base_daily_wages)
         endowment = total_team_size * daily_wage
@@ -62,18 +62,21 @@ class DictatorScenarioGenerator:
 
 class DictatorPromptGenerator:
     def generate_prompt(self, config: DictatorConfig) -> str:
-        """Generate the prompt for the dictator game scenario"""
+
         
         # Set up team description
         recipient_word = "person" if config.num_recipients == 1 else "people"
         team_description = f"{config.num_recipients} other {recipient_word}"
         
-        # Relationship context
+        
+        
+        # relationship context
         relationship_context = {
             "strangers": f"from different departments you don't know well",
             "colleagues": f"who are your regular work colleagues", 
             "friends": f"who are your close work friends"
         }
+        
         
         # Work contribution context
         work_context = {
@@ -82,10 +85,14 @@ class DictatorPromptGenerator:
             WorkContribution.LESS_WORK: "Your teammates carried most of the workload, with you contributing where you could but they did the majority of the heavy lifting."
         }
         
+        
+        
         # Base scenario setup
         prompt = f"""You have just completed a {config.project_context} with {team_description} {relationship_context[config.team_relationship]}. 
 
 {work_context[config.work_contribution]}
+
+
 
 The client has paid ${config.endowment:.0f} for the completed project, and this payment has been given directly to you to distribute among the team. You now need to decide how to allocate this money.
 
@@ -122,6 +129,9 @@ How do you want to allocate the ${config.endowment:.0f}? Please respond in the f
 
         return prompt
 
+
+
+
 class SinglePromptTester:
     def __init__(self):
         self.scenario_generator = DictatorScenarioGenerator()
@@ -129,7 +139,7 @@ class SinglePromptTester:
         self.current_config = None
     
     def generate_test_prompt(self, scenario_type: ScenarioType = None) -> str:
-        """Generate a single test prompt. Returns the prompt string."""
+       
         if scenario_type is None:
             scenario_type = random.choice(list(ScenarioType))
         
@@ -139,7 +149,7 @@ class SinglePromptTester:
         return current_prompt
     
     def get_scenario_info(self) -> Dict:
-        """Get information about the current scenario"""
+       
         if not self.current_config:
             return {"error": "No current scenario. Call generate_test_prompt() first."}
         
@@ -151,3 +161,5 @@ class SinglePromptTester:
             "project_context": self.current_config.project_context,
             "team_relationship": self.current_config.team_relationship
         }
+        
+        
