@@ -1,0 +1,20 @@
+PROMPT:
+==================================================
+You have just completed a client presentation with 5 other people who are your regular work colleagues. 
+
+You put in significantly more effort and time than your teammates, often working late nights and weekends to ensure project success.
+
+The client has paid $1800 for the completed project, and this payment has been given directly to you to distribute among the team. You now need to decide how to allocate this money.
+
+The client specifically requested that the payment be shared among all team members who contributed to the project. You must give at least some portion to your 5 teammates (they will split whatever you give them equally).
+
+You can:
+- Give a small portion to your teammates and keep most for yourself
+- Split the money equally among everyone
+- Give most or all of the money to your teammates
+
+How do you want to allocate the $1800? Please respond in the format "Keep X%, Donate Y%" where X + Y = 100 and Y > 0.
+
+AI RESPONSE:
+==================================================
+Keep 25%, Donate 75%
