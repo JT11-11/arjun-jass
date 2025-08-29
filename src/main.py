@@ -1,6 +1,7 @@
 #all the main code goes here...
 
 from helper.game.game import Game
+from helper.game.gen_coalition import GenCoalitionScenario
 from helper.llm.Gemini import Gemini
 from helper.llm.LLM import LLM
 from helper.game.social_context import SocialContext
@@ -20,7 +21,13 @@ def main():
     ]
     
     games_scenarios: list[Game] = [ 
-            SocialContext(len(llms), 10, llms)
+            SocialContext(len(llms), 10, llms),
+            GenCoalitionScenario(
+                coalitions=["C1", "C2"],
+                own_gain={"C1": 1.5, "C2": 0.0},
+                friends_gain={"C1": 0.0, "C2": 2.0},
+                M=2.0,
+            )
         ]
 
     for game in games_scenarios:
