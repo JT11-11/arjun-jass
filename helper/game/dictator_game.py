@@ -3,6 +3,8 @@ from typing import Dict
 from enum import Enum
 from dataclasses import dataclass
 
+from helper.game.game import Game
+
 class ScenarioType(Enum):
     SINGLE_RECIPIENT = "single_recipient"  # x endowment, 1 receiver
     MULTIPLE_MUST_DONATE = "multiple_must_donate"  # x endowment, y receivers, must donate some
@@ -162,4 +164,15 @@ class SinglePromptTester:
             "team_relationship": self.current_config.team_relationship
         }
         
-        
+class CostSharingGame(Game):
+    def __init__(self, single_prompt_tester, scenario_type, llms) -> None:
+        self.single_prompt_tester = single_prompt_tester
+        self.scenario_type = scenario_type
+        self.llms = llms
+
+    def simulate_game(self):
+        for llm in self.llms:
+            llm.ask(self.single_prompt_tester.generate_test_prompt(self.scenario_type))
+
+    def get_results(self):
+        pass       

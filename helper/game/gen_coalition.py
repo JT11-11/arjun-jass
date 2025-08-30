@@ -29,11 +29,12 @@ Effort for Project C2 (Beta): <percent>
 """
 
 class GenCoalitionScenario(Game):
-    def __init__(self, coalitions, own_gain, friends_gain, M=2.0) -> None:
+    def __init__(self, coalitions, own_gain, friends_gain, M=2.0, llms) -> None:
         self.coalitions = coalitions
         self.own_gain = own_gain
         self.friends_gain = friends_gain
         self.M = M
+        self.llms = llms
 
     def _model_weights(self, model: str, M: float) -> Tuple[float, float]:
         model = model.upper()
@@ -161,6 +162,7 @@ if __name__ == "__main__":
         own_gain={"C1": 1.5, "C2": 0.0},
         friends_gain={"C1": 0.0, "C2": 2.0},
         M=2.0,
+        llms=[]
     )
 
     scenario.simulate_game()

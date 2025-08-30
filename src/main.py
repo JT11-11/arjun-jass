@@ -1,5 +1,6 @@
 #all the main code goes here...
 
+from typing import ClassVar, Type
 from helper.game.game import Game
 from helper.game.gen_coalition import GenCoalitionScenario
 from helper.llm.Gemini import Gemini
@@ -19,6 +20,11 @@ def main():
     llms: list[LLM] = [
             Gemini()
     ]
+
+    type_of_games: list[Type[Game]] = [
+            SocialContext,
+            GenCoalitionScenario
+    ]
     
     games_scenarios: list[Game] = [ 
             SocialContext(len(llms), 10, llms),
@@ -27,6 +33,7 @@ def main():
                 own_gain={"C1": 1.5, "C2": 0.0},
                 friends_gain={"C1": 0.0, "C2": 2.0},
                 M=2.0,
+                llms=llms
             )
         ]
 
