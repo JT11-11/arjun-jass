@@ -2,15 +2,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 from helper.game.game import Game
-from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import re
 import math
 
 load_dotenv()
-
-client = OpenAI()
 
 PROMPT_TEMPLATE = """You are Agent 1.
 
@@ -29,7 +26,7 @@ Effort for Project C2 (Beta): <percent>
 """
 
 class GenCoalitionScenario(Game):
-    def __init__(self, coalitions, own_gain, friends_gain, M=2.0, llms) -> None:
+    def __init__(self, coalitions, own_gain, friends_gain, M=2.0, llms=[]) -> None:
         self.coalitions = coalitions
         self.own_gain = own_gain
         self.friends_gain = friends_gain
@@ -133,24 +130,7 @@ class GenCoalitionScenario(Game):
 
     def simulate_game(self):
         prompt = self.build_prompt()
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-        )
-        llm_text = resp.choices[0].message.content
-        alloc = self._parse_allocation(llm_text, self.coalitions)
-        evals = self.evaluate_all_models(alloc)
-
-        self.result = {
-            "prompt": prompt,
-            "llm_raw": llm_text,
-            "llm_allocation": alloc,
-            "M": self.M,
-            "own_gain": self.own_gain,
-            "friends_gain": self.friends_gain,
-            "model_evals": evals,
-        }
+        self.result = {}
 
     def get_results(self) -> Dict:
         return self.result if self.result else {}

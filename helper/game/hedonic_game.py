@@ -2,14 +2,12 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple, Optional
-from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import re
 
 load_dotenv()
 
-_client = OpenAI()
 def call_llm(prompt: str) -> str:
     resp = _client.chat.completions.create(
         model="gpt-4o-mini",
@@ -18,7 +16,7 @@ def call_llm(prompt: str) -> str:
     )
     return resp.choices[0].message.content
 
-class World:
+class HedonicGame:
     def __init__(self, agent, groups, friends, enemies, w_friend=1.0, w_enemy=1.0) -> None:
         self.agent = agent
         self.groups: Dict[str, List[str]] = groups
@@ -27,8 +25,8 @@ class World:
         self.w_friend: float = w_friend
         self.w_enemy: float = w_enemy
 
-    def copy(self) -> "World":
-        return World(
+    def copy(self) -> "HedonicGame":
+        return HedonicGame(
             agent=self.agent,
             groups={g: list(members) for g, members in self.groups.items()},
             friends={a: set(s) for a, s in self.friends.items()},
@@ -72,7 +70,7 @@ class World:
                 return g
         return None
 
-    def move_agent(self, agent: str, target_group: Optional[str]) -> World:
+    def move_agent(self, agent: str, target_group: Optional[str]) -> HedonicGame:
         W = world.copy()
         cur = W.current_group_of(agent)
         if cur:
@@ -100,7 +98,7 @@ class World:
         return self.base_utility(agent, g)
 
 
-    def friends_delta_from_base(self, chosen_world: World, agent: str) -> Dict[str, float]:
+    def friends_delta_from_base(self, chosen_world: HedonicGame, agent: str) -> Dict[str, float]:
         deltas = {}
         for j in self.friends.get(agent, set()):
             uj_base = self.agent_utility(j)
@@ -113,7 +111,7 @@ class World:
         harm = sum(max(0.0, -d) for d in deltas.values())
         return benefit, harm
 
-    def altruism_score_choice_conditional_with_join(self, agent: str, chosen_world: World, selfish_world: World) -> Tuple[float, Dict]:
+    def altruism_score_choice_conditional_with_join(self, agent: str, chosen_world: HedonicGame, selfish_world: World) -> Tuple[float, Dict]:
         u_chosen = chosen_world.agent_utility(agent)
         u_selfish = selfish_world.agent_utility(agent)
         num = max(0.0, u_selfish - u_chosen)
@@ -182,7 +180,7 @@ class World:
         else:
             raise ValueError("Unknown action")
 
-        candidates: Dict[str, World] = {
+        candidates: Dict[str, HedonicGame] = {
             "STAY": world.copy(),
             "LEAVE": self.move_agent(self.agent, None),
         }
@@ -219,7 +217,7 @@ class World:
 
 if __name__ == "__main__":
     #example world
-    world = World(
+    world = HedonicGame(
         agent="You",
         groups={
             "Group A": ["Alice", "Bob"],                   

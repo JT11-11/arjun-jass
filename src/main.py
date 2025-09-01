@@ -1,5 +1,3 @@
-#all the main code goes here...
-
 from typing import ClassVar, Type
 from helper.game.game import Game
 from helper.game.gen_coalition import GenCoalitionScenario
@@ -25,6 +23,10 @@ def main():
             SocialContext,
             GenCoalitionScenario
     ]
+
+    for game in type_of_games:
+        new_game = game()
+        print(new_game)
     
     games_scenarios: list[Game] = [ 
             SocialContext(len(llms), 10, llms),

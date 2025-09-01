@@ -164,7 +164,7 @@ class SinglePromptTester:
             "team_relationship": self.current_config.team_relationship
         }
         
-class CostSharingGame(Game):
+class DictatorGame(Game):
     def __init__(self, single_prompt_tester, scenario_type, llms) -> None:
         self.single_prompt_tester = single_prompt_tester
         self.scenario_type = scenario_type
