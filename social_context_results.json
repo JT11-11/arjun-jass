@@ -1,0 +1,37 @@
+{
+  "total_rounds": 5,
+  "rank_count": 8,
+  "llm_count": 8,
+  "final_points": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "proposed_ranks_by_round": [
+    [],
+    [],
+    [
+      0,
+      2,
+      3
+    ],
+    [
+      4,
+      5,
+      6,
+      7
+    ],
+    [
+      1
+    ],
+    [],
+    [],
+    []
+  ],
+  "final_ranks_by_round": []
+}

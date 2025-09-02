@@ -1,12 +1,12 @@
-from helper.game.game import Game
+from random import randrange
+from typing import List
+
 from helper.llm.LLM import LLM
 
-from google.genai import types
-
-from random import randrange
+import json
 
 # ranking game
-class SocialContext(Game):
+class SocialContext():
     def __init__(self, ranks: int, rounds: int, llms: list[LLM]) -> None:
         self.total_rounds = rounds
         self.curr_round = 0
@@ -17,14 +17,16 @@ class SocialContext(Game):
         print(self.points)
  
     def simulate_game(self):
-        proposed_ranks_by_round: list[list[int]] = []
+        proposed_ranks_by_round: list[list[list[int]]] = []
         final_ranks_by_round: list[list[int]] = []
 
         while self.curr_round < self.total_rounds:
             proposed_ranks: list[list[int]] = self._ask_for_rank()
             proposed_ranks_by_round.append(proposed_ranks)
 
-            final_rankings: list[int] = self._resolve_congestion(proposed_ranks)
+            self._save_result(proposed_ranks, [])
+
+            final_rankings: list[int] = self.resolve_congestion(proposed_ranks)
             final_ranks_by_round.append(final_rankings)
 
             self.last_round_ranks = list(map(lambda x: x+1, final_rankings))
@@ -32,7 +34,7 @@ class SocialContext(Game):
             self.curr_round += 1
 
         # save results in data
-        self._save_result()
+        
 
     # returns the proposed rank for each LLM
     def _ask_for_rank(self) -> list[list[int]]:
@@ -40,44 +42,70 @@ class SocialContext(Game):
         reasoning = [[] for _ in range(self.rank_no)]
 
         for index, llm in enumerate(self.llms):
-            llm_response = llm.ask(
+            value, value_reasoning = llm.ask(
                 self._generate_prompt(index), 
             )
   
             # assigning to their rank in the array
             # converting llm rank response to array index
-            ranking[llm_response['value']-1].append(index) 
-            reasoning.append(llm_response['reasoning'])
+            ranking[value-1].append(index) 
+            reasoning.append(value_reasoning)
 
-        return ranking
+        return ranking 
 
-    def _resolve_congestion(self, proposed_ranks: list[list[int]]) -> list[int]:
-        final_ranks = [0 for _ in range(self.rank_no)]
+    def resolve_congestion(self, proposed_ranks: List[List[int]]) -> List[int]:
+        N = self.rank_no
+        # work on a shallow copy of the input lists to avoid mutating caller data / aliasing
+        proposed = [lst.copy() for lst in proposed_ranks]
+        final_ranks = [0] * N
 
-        for rank,llm_in_rank in enumerate(proposed_ranks):
-            # only one person chose this rank
-            if len(llm_in_rank) == 1:
-                final_ranks[rank] = llm_in_rank[0]
-
-            if len(llm_in_rank) == 0:
-                for ranks in range(rank, self.rank_no-1):
-                    proposed_ranks[ranks] = proposed_ranks[ranks+1]
-                proposed_ranks[self.rank_no-1] = []
-
-            # multiple people chose the same rank
-
-            chosen_llm_index = randrange(len(llm_in_rank))
-            chosen_llm = llm_in_rank[chosen_llm_index]
-            del llm_in_rank[chosen_llm_index]
-            final_ranks[rank] = chosen_llm
-
-            for ranks in range(rank, self.rank_no-1):
-                if proposed_ranks[ranks] == []:
-                    proposed_ranks[ranks] = llm_in_rank
+        rank = 0
+        while rank < N:
+            # If current rank is empty, push everything forward (shift left) until this rank has something
+            while not proposed[rank]:
+                # if there's no non-empty proposal later, break — this rank stays empty
+                if not any(proposed[i] for i in range(rank + 1, N)):
                     break
+                # shift everything left by one position starting from `rank`
+                for s in range(rank, N - 1):
+                    proposed[s] = proposed[s + 1].copy()
+                proposed[N - 1] = []
+                # loop again to check if newly-moved proposals exist at this rank
+
+            # Now handle the rank according to number of candidates
+            candidates = proposed[rank]
+            if len(candidates) == 0:
+                # nothing to place here (no future proposals either)
+                final_ranks[rank] = 0
+
+            elif len(candidates) == 1:
+                # single candidate -> assign and clear this slot
+                final_ranks[rank] = candidates[0]
+                proposed[rank] = []
+
+            else:
+                # congestion: choose one randomly, assign, and move the rest to the next empty rank
+                chosen_idx = randrange(len(candidates))
+                final_ranks[rank] = candidates[chosen_idx]
+
+                leftovers = [c for i, c in enumerate(candidates) if i != chosen_idx]
+                proposed[rank] = []
+
+                # find the next empty rank after current one and put leftovers there (copy to avoid aliasing)
+                next_empty = None
+                for k in range(rank + 1, N):
+                    if not proposed[k]:
+                        next_empty = k
+                        break
+
+                if next_empty is not None:
+                    proposed[next_empty] = leftovers.copy()
+                # if there's no empty rank left, the leftovers can't be placed (they're effectively unassigned)
+
+            rank += 1
 
         return final_ranks
-
+                        
     def _generate_prompt(self, llm_index: int) -> str:
         prompt_format = """ The game has {player_num} players and {rank_count} ranks (Rank 1 gives the most points, Rank R the least). Each player chooses exactly one rank each round.
 After everyone chooses:
@@ -99,5 +127,46 @@ Choose the rank number you will select for this round. """
     def debug_cmd(self):
         pass
 
-    def _save_result(self):
-        pass
+    def _save_result(self, proposed_ranks_by_round, final_ranks_by_round) -> None:
+        """
+        Save the results of the simulation into a dictionary.
+        This can be exported to JSON, DB, etc.
+        """
+        self.results = {
+            "total_rounds": self.total_rounds,
+            "rank_count": self.rank_no,
+            "llm_count": len(self.llms),
+            "final_points": self.points,
+            "proposed_ranks_by_round": proposed_ranks_by_round,
+            "final_ranks_by_round": final_ranks_by_round,
+        }
+
+        # (optional) also dump to a JSON file for persistence
+        with open("social_context_results.json", "w") as f:
+            json.dump(self.results, f, indent=2)
+
+        print("Results saved to social_context_results.json")
+
+if __name__ == "__main__":
+    game = SocialContext(8, rounds=5, llms=[])
+    print(game.resolve_congestion([
+        [],
+        [],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          4,
+          5,
+          6,
+          7
+        ],
+        [
+          1
+        ],
+        [],
+        [],
+        []
+    ]))

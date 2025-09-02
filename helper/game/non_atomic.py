@@ -2,9 +2,9 @@ from helper.game.game import Game
 
 # public goods game
 class NonAtomicCongestion(Game):
-    def __init__(self, init_fish_num, max_consumption, total_rounds, llms):
+    def __init__(self, init_fish_num, fishermen_num, max_consumption, total_rounds, llms):
         self.fish_num = init_fish_num    
-        self.fishermen_num = 10000
+        self.fishermen_num = fishermen_num
         self.consumption_limit = max_consumption
         self.total_rounds = total_rounds
         self.curr_round = 0

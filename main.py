@@ -1,6 +1,6 @@
-from typing import ClassVar, Type
+from typing import Type
 from helper.game.cost_sharing_scheduling import CostSharingGame
-from helper.game.dictator_game import DictatorGame
+from helper.game.dictator_game import DictatorGame, SinglePromptTester
 from helper.game.game import Game
 from helper.game.gen_coalition import GenCoalitionScenario
 from helper.llm.LLM import LLM
@@ -45,12 +45,33 @@ def main():
     for game_type in type_of_games:
         if game_type is SocialContext:
             print("Setting up Social Context")
+            game = SocialContext(len(llms), rounds=5, llms=llms)
+            game.simulate_game()
 
         elif game_type is GenCoalitionScenario:
             print("Setting up Gen Coalition Scenario")
+            game = GenCoalitionScenario(
+                    coalitions=["C1", "C2"],
+                    own_gain={"C1": 1.5, "C2": 0.0},
+                    friends_gain={"C1": 0.0, "C2": 2.0},
+                    M=2.0,
+                    llms=llms
+            )
+            game.simulate_game()
+
 
         elif game_type is NonAtomicCongestion:
             print("Setting up Non Atomic Congestive Scenario")
+            # initialize the game
+            game = NonAtomicCongestion(
+                init_fish_num=500,    # starting fish population (healthy bay)
+                fishermen_num=10,     # number of fishing crews
+                max_consumption=10,   # each crew can catch up to 10 per round
+                total_rounds=15,      # run for 15 days/rounds
+                llms=llms
+            )
+
+            game.simulate_game()
 
         elif game_type is HedonicGame:
             print("Setting up Hedonic Game")
@@ -97,6 +118,9 @@ def main():
 
         elif game_type is DictatorGame:
             print("Setting up Dictator Game")    
+
+            single_prompt_tester = SinglePromptTester()
+            game = DictatorGame(single_prompt_tester, ScenarioType.SINGLE_RECIPIENT, llms)
 
 
 if __name__ == "__main__":
