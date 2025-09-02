@@ -3,7 +3,6 @@ from helper.game.cost_sharing_scheduling import CostSharingGame
 from helper.game.dictator_game import DictatorGame
 from helper.game.game import Game
 from helper.game.gen_coalition import GenCoalitionScenario
-from helper.llm.Gemini import Gemini
 from helper.llm.LLM import LLM
 from helper.game.social_context import SocialContext
 from helper.game.non_atomic import NonAtomicCongestion

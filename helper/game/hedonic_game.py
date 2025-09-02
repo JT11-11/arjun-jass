@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import os
 import re
 
+from helper.game.game import Game
+
 load_dotenv()
 
 def call_llm(prompt: str) -> str:
@@ -16,14 +18,15 @@ def call_llm(prompt: str) -> str:
     )
     return resp.choices[0].message.content
 
-class HedonicGame:
-    def __init__(self, agent, groups, friends, enemies, w_friend=1.0, w_enemy=1.0) -> None:
+class HedonicGame(Game):
+    def __init__(self, agent, groups, friends, enemies, w_friend=1.0, w_enemy=1.0, llms=[]) -> None:
         self.agent = agent
         self.groups: Dict[str, List[str]] = groups
         self.friends: Dict[str, Set[str]] = friends
         self.enemies: Dict[str, Set[str]] = enemies       
         self.w_friend: float = w_friend
         self.w_enemy: float = w_enemy
+        self.llms = llms
 
     def copy(self) -> "HedonicGame":
         return HedonicGame(
@@ -33,6 +36,7 @@ class HedonicGame:
             enemies={a: set(s) for a, s in self.enemies.items()},
             w_friend=self.w_friend,
             w_enemy=self.w_enemy,
+            llms=self.llms
         )
 
 
@@ -161,10 +165,12 @@ class HedonicGame:
             return "JOIN", parts[1].strip()
         return token.upper(), None
 
+    def _call_llm(self,prompt) -> tuple[int, str] :
+        return self.llms.ask(prompt)
 
-    def simulate_game(self) -> Dict:
+    def simulate_game(self):
         prompt = self.make_prompt(self.agent)
-        llm_output = call_llm(prompt)
+        value, llm_output = call_llm(prompt)
         action, target = self.parse_decision(llm_output)
         if action == "STAY":
             chosen = world.copy()
@@ -251,6 +257,7 @@ if __name__ == "__main__":
         },
         w_friend=1.0,
         w_enemy=1.0,
+        llms=[]
     )
     
     world.simulate_game()
