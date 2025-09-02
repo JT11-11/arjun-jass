@@ -24,13 +24,19 @@ class LLM():
             "content": prompt
         })
 
-        response = self.client.responses.parse(
-          model=self.model,
-          input=self.history,
-          text_format=AnswerFormat
-        )
+        curr_response = self.client.chat.completions.parse(
+          model="gpt-4o-2024-08-06",
+          messages=self.history,
+          response_format=AnswerFormat,
 
-        return (response["value", response["reasoning"]])
+        )    
+        print(curr_response.choices[0].message)
+
+        reasoning_tuple, value_tuple= curr_response.choices[0].message.parsed
+        print(reasoning_tuple)
+        print(value_tuple)
+
+        return (value_tuple[1], reasoning_tuple[1])
 
 if __name__ == "__main__":
     llm_models: list[str] = [

@@ -1,22 +1,12 @@
 # altruism_game.py
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple, Optional
 from dotenv import load_dotenv
-import os
 import re
 
 from helper.game.game import Game
 
 load_dotenv()
-
-def call_llm(prompt: str) -> str:
-    resp = _client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-    )
-    return resp.choices[0].message.content
 
 class HedonicGame(Game):
     def __init__(self, agent, groups, friends, enemies, w_friend=1.0, w_enemy=1.0, llms=[]) -> None:
@@ -166,11 +156,11 @@ class HedonicGame(Game):
         return token.upper(), None
 
     def _call_llm(self,prompt) -> tuple[int, str] :
-        return self.llms.ask(prompt)
+        return self.llms[0].ask(prompt)
 
     def simulate_game(self):
         prompt = self.make_prompt(self.agent)
-        value, llm_output = call_llm(prompt)
+        value, llm_output = self._call_llm(prompt)
         action, target = self.parse_decision(llm_output)
         if action == "STAY":
             chosen = world.copy()

@@ -55,6 +55,46 @@ def main():
         elif game_type is HedonicGame:
             print("Setting up Hedonic Game")
 
+            game = HedonicGame(
+                    agent="You",
+                    groups={
+                        "Group A": ["Alice", "Bob"],                   
+                        "Group B": ["You", "Clara", "Eve", "Frank"],    
+                        "Group C": ["Dan", "Grace", "Alice"],    
+                        "Group D": ["Henry", "Irene"],
+                    },
+                    friends={
+                        "You": {"Alice", "Clara", "Dan", "Grace"},
+                        "Alice": {"You"},
+                        "Clara": {"You"},
+                        "Dan": {"You"},
+                        "Grace": {"You"},
+                        "Bob": set(),
+                        "Eve": set(),
+                        "Frank": set(),
+                        "Henry": set(),
+                        "Irene": set(),
+                    },
+                    enemies={
+                        "You": {"Bob", "Eve", "Frank"},
+                        "Alice": set(),
+                        "Clara": set(),
+                        "Dan": set(),
+                        "Grace": set(),
+                        "Bob": set(),
+                        "Eve": set(),
+                        "Frank": set(),
+                        "Henry": set(),
+                        "Irene": set(),
+                    },
+                    w_friend=1.0,
+                    w_enemy=1.0,
+                    llms=llms
+            )
+
+            game.simulate_game()
+            print(game.get_results())
+
         elif game_type is DictatorGame:
             print("Setting up Dictator Game")    
 
