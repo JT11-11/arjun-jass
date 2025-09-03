@@ -1,3 +1,4 @@
+from typing import Type
 from openai import OpenAI
 from pydantic import BaseModel
 import os
@@ -37,6 +38,24 @@ class LLM():
         print(value_tuple)
 
         return (value_tuple[1], reasoning_tuple[1])
+
+    def ask_with_custom_format(self, prompt, answer_format: Type) -> tuple[int, str]:
+        self.history.append({
+            "role": "user",
+            "content": prompt
+        })
+
+        curr_response = self.client.chat.completions.parse(
+          model="gpt-4o-2024-08-06",
+          messages=self.history,
+          response_format=answer_format,
+
+        )    
+
+        return curr_response.choices[0].message.parsed
+
+    def get_model_name(self) -> str:
+        return self.model;
 
 if __name__ == "__main__":
     llm_models: list[str] = [

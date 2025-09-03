@@ -50,11 +50,11 @@ class NonAtomicCongestion(Game):
         reasoning = []
 
         for index, llm in enumerate(self.llms):
-            llm_response = llm.ask(
+            value, value_reasoning = llm.ask(
                 self._generate_prompt(index),
             )
 
-            consumptions.append(llm_response['value'])
-            reasoning.append(llm_response['reasoning'])
+            consumptions.append(value)
+            reasoning.append(value_reasoning)
 
         return consumptions

@@ -1,4 +1,6 @@
 from typing import Type
+from helper.game import cost_sharing_scheduling
+from helper.game import dictator_game
 from helper.game.cost_sharing_scheduling import CostSharingGame
 from helper.game.dictator_game import DictatorGame, SinglePromptTester
 from helper.game.game import Game
@@ -34,18 +36,20 @@ def main():
         llms.append(LLM(model)) 
 
     type_of_games: list[Type[Game]] = [
-            NonAtomicCongestion,
-            SocialContext,
-            HedonicGame,
-            GenCoalitionScenario,
             CostSharingGame,
             DictatorGame
     ]
 
     for game_type in type_of_games:
+
         if game_type is SocialContext:
             print("Setting up Social Context")
             game = SocialContext(len(llms), rounds=5, llms=llms)
+            game.simulate_game()
+
+        elif game_type is CostSharingGame:
+            single_prompt_tester = cost_sharing_scheduling.SinglePromptTester()
+            game = CostSharingGame(single_prompt_tester, cost_sharing_scheduling.ScenarioType.FILLER, llms)
             game.simulate_game()
 
         elif game_type is GenCoalitionScenario:
@@ -119,8 +123,9 @@ def main():
         elif game_type is DictatorGame:
             print("Setting up Dictator Game")    
 
-            single_prompt_tester = SinglePromptTester()
-            game = DictatorGame(single_prompt_tester, ScenarioType.SINGLE_RECIPIENT, llms)
+            single_prompt_tester = dictator_game.SinglePromptTester()
+            game = DictatorGame(single_prompt_tester, dictator_game.ScenarioType.SINGLE_RECIPIENT, llms)
+            game.simulate_game()
 
 
 if __name__ == "__main__":
