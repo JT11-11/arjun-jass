@@ -19,7 +19,11 @@ class SocialContext():
             {"model": llm.get_model_name(), "rounds": []} for llm in llms
         ]
         self.lastest_reasoning = ["" for _ in range(len(llms))]
-        print(self.points)
+
+        # Open CSV once and add header
+        self.csv_file = open("data/social_context_results.csv", "w", newline="")
+        self.writer = csv.writer(self.csv_file)
+        self.writer.writerow(["round", "llm", "proposed_rank", "reasoning", "final_rank", "points_after_round"])
  
     def simulate_game(self):
         proposed_ranks_by_round: list[list[list[int]]] = []
@@ -31,6 +35,10 @@ class SocialContext():
 
             final_rankings: list[int] = self.resolve_congestion(proposed_ranks)
             final_ranks_by_round.append(final_rankings)
+
+            print("Final ranks have been chosen")
+            print(proposed_ranks)
+            print(final_rankings)
 
             # update per-LLM round history
             for llm_idx, llm in enumerate(self.llms):
@@ -49,22 +57,20 @@ class SocialContext():
                 if final_rank is not None:
                     self.points[llm_idx] += self.rank_no - final_rank + 1
 
-                self.llm_histories[llm_idx]["rounds"].append({
-                    "round": self.curr_round + 1,
-                    "proposed_rank": proposed_rank,
-                    "reasoning": self.lastest_reasoning[llm_idx],
-                    "final_rank": final_rank,
-                    "points_after_round": self.points[llm_idx]
-                })
+                self._save_result([
+                    self.curr_round + 1,
+                    llm.get_model_name(),
+                    proposed_rank,
+                    self.lastest_reasoning[llm_idx],
+                    final_rank,
+                    self.points[llm_idx]
+                ])
 
             self.last_round_ranks = [
                 (r + 1 if r != -1 else -1) for r in final_rankings
             ]
             
             self.curr_round += 1
-
-        # save results in data
-        self._save_result(proposed_ranks_by_round, final_ranks_by_round) 
 
     # returns the proposed rank for each LLM
     def _ask_for_rank(self) -> list[list[int]]:
@@ -79,7 +85,7 @@ class SocialContext():
             # assigning to their rank in the array
             # converting llm rank response to array index
             ranking[value-1].append(index) 
-            reasoning.append(value_reasoning)
+            reasoning[index] = value_reasoning.replace("\n", "")
 
         self.lastest_reasoning = reasoning
         return ranking 
@@ -158,52 +164,12 @@ Choose the rank number you will select for this round. """
     def debug_cmd(self):
         pass
 
-    def _save_result(self, proposed_ranks_by_round, final_ranks_by_round) -> None:
-        """
-        Save the results of the simulation into a dictionary.
-        This can be exported to JSON, DB, etc.
-        """
-        self.results = {
-            "total_rounds": self.total_rounds,
-            "rank_count": self.rank_no,
-            "llm_count": len(self.llms),
-            "final_points": self.points,
-            "proposed_ranks_by_round": proposed_ranks_by_round,
-            "final_ranks_by_round": final_ranks_by_round,
-            "llm_histories": self.llm_histories,
-        }
 
-        # ---- Save to JSON for debugging ----
-        with open("data/social_context_results.json", "w") as f:
-            json.dump(self.results, f, indent=2)
 
-        # ---- Save to CSV ----
-        with open("data/social_context_results.csv", "w", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            # header row
-            writer.writerow([
-                "model",
-                "round",
-                "proposed_rank",
-                "reasoning",
-                "final_rank",
-                "points_after_round"
-            ])
-
-            # write per-LLM history
-            for llm_data in self.llm_histories:
-                model_name = llm_data["model"]
-                for round_data in llm_data["rounds"]:
-                    writer.writerow([
-                        model_name,
-                        round_data["round"],
-                        round_data["proposed_rank"],
-                        round_data["reasoning"],
-                        round_data["final_rank"],
-                        round_data["points_after_round"]
-                    ])
-
-        print("Results saved to social_context_results.json and social_context_results.csv")
+    def _save_result(self, row):
+        """Save a single row of data to the CSV and flush immediately."""
+        self.writer.writerow(row)
+        self.csv_file.flush()
         
 if __name__ == "__main__":
     llm_models: list[str] = [

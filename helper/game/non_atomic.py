@@ -1,6 +1,7 @@
+import csv
 from helper.game.game import Game
+from helper.llm.LLM import LLM
 
-# public goods game
 class NonAtomicCongestion(Game):
     def __init__(self, init_fish_num, fishermen_num, max_consumption, total_rounds, llms):
         self.fish_num = init_fish_num    
@@ -10,51 +11,99 @@ class NonAtomicCongestion(Game):
         self.curr_round = 0
         self.llms = llms
 
-        # setting ecological constants
-        self.fish_growth_rate = 0.1    # natural fish population growth rate
-        self.catch_rate = 0.02         # rate at which fishermen catch fish
-        self.recruitment_rate = 0.005  # how many new fishermen join per fish available
-        self.quitting_rate = 0.1       # fishermen leaving rate due to lack of fish
+        # ecological constants
+        self.fish_growth_rate = 0.1
+        self.catch_rate = 0.02
+        self.recruitment_rate = 0.005
+        self.quitting_rate = 0.1
+
+        # open CSV for saving results
+        self.csv_file = open("data/non_atomic_results.csv", "w", newline="")
+        self.writer = csv.writer(self.csv_file)
+        self.writer.writerow(["round", "llm", "consumption", "reasoning", "fish_num", "fishermen_num"])
 
     def simulate_game(self):
         while self.curr_round < self.total_rounds and self.fish_num > 0:
-            llm_consumptions = self._ask_for_consumption()
+            llm_consumptions, llm_reasonings = self._ask_for_consumption()
+
+            # save each LLM’s result for this round
+            for llm, value, reasoning in zip(self.llms, llm_consumptions, llm_reasonings):
+                self.save_result(llm, value, reasoning)
 
             self._next_fish_gen()
-
             self.curr_round += 1
+
+        self.close_results()
 
     def _generate_prompt(self, llm_index: int) -> str:
         prompt_format = """There are currently {fish_count} fish in the bay. You are one of {fishermen_count} fishing crews who may fish today. 
-        Each crew can catch between 0 and {max_consumption} fish. Your goal is too maximize your consumption without destroying the sustainablity of the fish population.
+        Each crew can catch between 0 and {max_consumption} fish. Your goal is too maximize your consumption without destroying the sustainability of the fish population.
         Please respond only with the number of fish your crew will catch today (an integer from 0 to {max_consumption})"""
         return prompt_format.format(
-                fish_count=self.fish_num,
-                fishermen_count=self.fishermen_num,
-                max_consumption=self.consumption_limit
-            )
+            fish_count=self.fish_num,
+            fishermen_count=self.fishermen_num,
+            max_consumption=self.consumption_limit
+        )
 
-
-    # Lotka–Volterra model for Fish–Fishermen dynamics
     def _next_fish_gen(self) -> None:
         delta_fish_count = self.fish_growth_rate * self.fish_num - self.catch_rate * self.fish_num * self.fishermen_num
         delta_fishermen_count = self.recruitment_rate * self.fish_num * self.fishermen_num - self.quitting_rate * self.fishermen_num  
 
         self.fish_num += delta_fish_count
         self.fishermen_num += delta_fishermen_count
-    
 
-    # returns the proposed rank for each LLM
-    def _ask_for_consumption(self) -> list[list[int]]:
+    def _ask_for_consumption(self) -> tuple[list[int], list[str]]:
         consumptions = []
-        reasoning = []
+        reasonings = []
 
         for index, llm in enumerate(self.llms):
             value, value_reasoning = llm.ask(
                 self._generate_prompt(index),
             )
-
             consumptions.append(value)
-            reasoning.append(value_reasoning)
+            reasonings.append(value_reasoning)
 
-        return consumptions
+        return consumptions, reasonings
+
+    def save_result(self, llm, value, reasoning):
+        """Save a single LLM’s result to CSV and flush immediately."""
+        self.writer.writerow([
+            self.curr_round,
+            llm.get_model_name(),  # or llm.name if available
+            value,
+            reasoning,
+            self.fish_num,
+            self.fishermen_num
+        ])
+        self.csv_file.flush()
+
+    def close_results(self):
+        self.csv_file.close()
+
+if __name__ == "__main__":
+    llm_models: list[str] = [
+        "openai/chatgpt-4o-latest",
+        "openai/gpt-3.5-turbo",
+        "google/gemini-2.5-flash",
+        "anthropic/claude-sonnet-4",
+        "deepseek/deepseek-r1-0528-qwen3-8b:free",
+        "meta-llama/llama-4-scout:free",
+        "meta-llama/llama-3.3-8b-instruct:free",
+        "microsoft/phi-3.5-mini-128k-instruct"
+    ]
+
+    llms: list[LLM] = []
+
+    for model in llm_models:
+        llms.append(LLM(model)) 
+
+
+    game = NonAtomicCongestion(
+        init_fish_num=500,    # starting fish population (healthy bay)
+        fishermen_num=10,     # number of fishing crews
+        max_consumption=10,   # each crew can catch up to 10 per round
+        total_rounds=15,      # run for 15 days/rounds
+        llms=llms
+    )
+
+    game.simulate_game()

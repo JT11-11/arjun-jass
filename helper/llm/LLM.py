@@ -31,7 +31,6 @@ class LLM():
           response_format=AnswerFormat,
 
         )    
-        print(curr_response.choices[0].message)
 
         reasoning_tuple, value_tuple= curr_response.choices[0].message.parsed
 
