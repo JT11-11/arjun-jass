@@ -3,35 +3,497 @@
   "rank_count": 8,
   "llm_count": 8,
   "final_points": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
+    18,
+    24,
+    24,
+    14,
+    17,
+    23,
+    36,
+    24
   ],
   "proposed_ranks_by_round": [
-    [],
-    [],
     [
-      3,
-      7
+      [
+        6
+      ],
+      [],
+      [
+        1,
+        3,
+        5,
+        7
+      ],
+      [
+        0,
+        2,
+        4
+      ],
+      [],
+      [],
+      [],
+      []
     ],
     [
-      0,
-      1,
-      2,
-      6
+      [],
+      [
+        2,
+        4
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        6
+      ],
+      [
+        0,
+        1,
+        3
+      ],
+      [],
+      [],
+      []
     ],
     [
-      4,
-      5
+      [],
+      [],
+      [
+        3,
+        6,
+        7
+      ],
+      [
+        4
+      ],
+      [
+        0,
+        1,
+        2,
+        5
+      ],
+      [],
+      [],
+      []
     ],
-    [],
-    [],
-    []
+    [
+      [],
+      [
+        6,
+        7
+      ],
+      [
+        2,
+        3,
+        4
+      ],
+      [
+        1
+      ],
+      [
+        0,
+        5
+      ],
+      [],
+      [],
+      []
+    ],
+    [
+      [],
+      [
+        1
+      ],
+      [
+        2,
+        3,
+        5
+      ],
+      [
+        0,
+        4,
+        6
+      ],
+      [
+        7
+      ],
+      [],
+      [],
+      []
+    ]
   ],
-  "final_ranks_by_round": []
+  "final_ranks_by_round": [
+    [
+      6,
+      5,
+      0,
+      7,
+      2,
+      1,
+      4,
+      3
+    ],
+    [
+      2,
+      7,
+      6,
+      3,
+      4,
+      5,
+      0,
+      1
+    ],
+    [
+      6,
+      4,
+      1,
+      3,
+      5,
+      7,
+      0,
+      2
+    ],
+    [
+      6,
+      2,
+      1,
+      0,
+      7,
+      4,
+      5,
+      3
+    ],
+    [
+      1,
+      5,
+      6,
+      7,
+      2,
+      0,
+      3,
+      4
+    ]
+  ],
+  "llm_histories": [
+    {
+      "model": "openai/chatgpt-4o-latest",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 3,
+          "points_after_round": 6
+        },
+        {
+          "round": 2,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 7,
+          "points_after_round": 8
+        },
+        {
+          "round": 3,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 7,
+          "points_after_round": 10
+        },
+        {
+          "round": 4,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 4,
+          "points_after_round": 15
+        },
+        {
+          "round": 5,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 6,
+          "points_after_round": 18
+        }
+      ]
+    },
+    {
+      "model": "openai/gpt-3.5-turbo",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 6,
+          "points_after_round": 3
+        },
+        {
+          "round": 2,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 8,
+          "points_after_round": 4
+        },
+        {
+          "round": 3,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 3,
+          "points_after_round": 10
+        },
+        {
+          "round": 4,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 3,
+          "points_after_round": 16
+        },
+        {
+          "round": 5,
+          "proposed_rank": 2,
+          "reasoning": "",
+          "final_rank": 1,
+          "points_after_round": 24
+        }
+      ]
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 5,
+          "points_after_round": 4
+        },
+        {
+          "round": 2,
+          "proposed_rank": 2,
+          "reasoning": "",
+          "final_rank": 1,
+          "points_after_round": 12
+        },
+        {
+          "round": 3,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 8,
+          "points_after_round": 13
+        },
+        {
+          "round": 4,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 2,
+          "points_after_round": 20
+        },
+        {
+          "round": 5,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 5,
+          "points_after_round": 24
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-4",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 8,
+          "points_after_round": 1
+        },
+        {
+          "round": 2,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 4,
+          "points_after_round": 6
+        },
+        {
+          "round": 3,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 4,
+          "points_after_round": 11
+        },
+        {
+          "round": 4,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 8,
+          "points_after_round": 12
+        },
+        {
+          "round": 5,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 7,
+          "points_after_round": 14
+        }
+      ]
+    },
+    {
+      "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 7,
+          "points_after_round": 2
+        },
+        {
+          "round": 2,
+          "proposed_rank": 2,
+          "reasoning": "",
+          "final_rank": 5,
+          "points_after_round": 6
+        },
+        {
+          "round": 3,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 2,
+          "points_after_round": 13
+        },
+        {
+          "round": 4,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 6,
+          "points_after_round": 16
+        },
+        {
+          "round": 5,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 8,
+          "points_after_round": 17
+        }
+      ]
+    },
+    {
+      "model": "meta-llama/llama-4-scout:free",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 2,
+          "points_after_round": 7
+        },
+        {
+          "round": 2,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 6,
+          "points_after_round": 10
+        },
+        {
+          "round": 3,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 5,
+          "points_after_round": 14
+        },
+        {
+          "round": 4,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 7,
+          "points_after_round": 16
+        },
+        {
+          "round": 5,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 2,
+          "points_after_round": 23
+        }
+      ]
+    },
+    {
+      "model": "meta-llama/llama-3.3-8b-instruct:free",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 1,
+          "reasoning": "",
+          "final_rank": 1,
+          "points_after_round": 8
+        },
+        {
+          "round": 2,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 3,
+          "points_after_round": 14
+        },
+        {
+          "round": 3,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 1,
+          "points_after_round": 22
+        },
+        {
+          "round": 4,
+          "proposed_rank": 2,
+          "reasoning": "",
+          "final_rank": 1,
+          "points_after_round": 30
+        },
+        {
+          "round": 5,
+          "proposed_rank": 4,
+          "reasoning": "",
+          "final_rank": 3,
+          "points_after_round": 36
+        }
+      ]
+    },
+    {
+      "model": "microsoft/phi-3.5-mini-128k-instruct",
+      "rounds": [
+        {
+          "round": 1,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 4,
+          "points_after_round": 5
+        },
+        {
+          "round": 2,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 2,
+          "points_after_round": 12
+        },
+        {
+          "round": 3,
+          "proposed_rank": 3,
+          "reasoning": "",
+          "final_rank": 6,
+          "points_after_round": 15
+        },
+        {
+          "round": 4,
+          "proposed_rank": 2,
+          "reasoning": "",
+          "final_rank": 5,
+          "points_after_round": 19
+        },
+        {
+          "round": 5,
+          "proposed_rank": 5,
+          "reasoning": "",
+          "final_rank": 4,
+          "points_after_round": 24
+        }
+      ]
+    }
+  ]
 }

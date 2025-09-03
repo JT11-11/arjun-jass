@@ -34,8 +34,6 @@ class LLM():
         print(curr_response.choices[0].message)
 
         reasoning_tuple, value_tuple= curr_response.choices[0].message.parsed
-        print(reasoning_tuple)
-        print(value_tuple)
 
         return (value_tuple[1], reasoning_tuple[1])
 
@@ -50,7 +48,7 @@ class LLM():
           messages=self.history,
           response_format=answer_format,
 
-        )    
+        )
 
         return curr_response.choices[0].message.parsed
 

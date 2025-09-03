@@ -4,6 +4,7 @@ from typing import List
 from helper.llm.LLM import LLM
 
 import json
+import csv
 
 # ranking game
 class SocialContext():
@@ -14,6 +15,10 @@ class SocialContext():
         self.points: list[int] = [0 for _ in range(len(llms))]
         self.last_round_ranks: list[int] = [-1 for _ in range(len(llms))]
         self.llms = llms
+        self.llm_histories: list[dict] = [
+            {"model": llm.get_model_name(), "rounds": []} for llm in llms
+        ]
+        self.lastest_reasoning = ["" for _ in range(len(llms))]
         print(self.points)
  
     def simulate_game(self):
@@ -24,22 +29,47 @@ class SocialContext():
             proposed_ranks: list[list[int]] = self._ask_for_rank()
             proposed_ranks_by_round.append(proposed_ranks)
 
-            self._save_result(proposed_ranks, [])
-
             final_rankings: list[int] = self.resolve_congestion(proposed_ranks)
             final_ranks_by_round.append(final_rankings)
 
-            self.last_round_ranks = list(map(lambda x: x+1, final_rankings))
+            # update per-LLM round history
+            for llm_idx, llm in enumerate(self.llms):
+                # find what this LLM proposed (search proposed_ranks)
+                proposed_rank = None
+                for r_idx, lst in enumerate(proposed_ranks):
+                    if llm_idx in lst:
+                        proposed_rank = r_idx + 1  # convert index to human-readable rank
+                        break
+
+                final_rank = None
+                if llm_idx in final_rankings:
+                    final_rank = final_rankings.index(llm_idx) + 1
+
+                # assign points based on rank (Rank 1 = highest points)
+                if final_rank is not None:
+                    self.points[llm_idx] += self.rank_no - final_rank + 1
+
+                self.llm_histories[llm_idx]["rounds"].append({
+                    "round": self.curr_round + 1,
+                    "proposed_rank": proposed_rank,
+                    "reasoning": self.lastest_reasoning[llm_idx],
+                    "final_rank": final_rank,
+                    "points_after_round": self.points[llm_idx]
+                })
+
+            self.last_round_ranks = [
+                (r + 1 if r != -1 else -1) for r in final_rankings
+            ]
             
             self.curr_round += 1
 
         # save results in data
-        
+        self._save_result(proposed_ranks_by_round, final_ranks_by_round) 
 
     # returns the proposed rank for each LLM
     def _ask_for_rank(self) -> list[list[int]]:
         ranking = [[] for _ in range(self.rank_no)]
-        reasoning = [[] for _ in range(self.rank_no)]
+        reasoning = ["" for _ in range(self.rank_no)]
 
         for index, llm in enumerate(self.llms):
             value, value_reasoning = llm.ask(
@@ -51,6 +81,7 @@ class SocialContext():
             ranking[value-1].append(index) 
             reasoning.append(value_reasoning)
 
+        self.lastest_reasoning = reasoning
         return ranking 
 
     def resolve_congestion(self, proposed_ranks: List[List[int]]) -> List[int]:
@@ -139,34 +170,58 @@ Choose the rank number you will select for this round. """
             "final_points": self.points,
             "proposed_ranks_by_round": proposed_ranks_by_round,
             "final_ranks_by_round": final_ranks_by_round,
+            "llm_histories": self.llm_histories,
         }
 
-        # (optional) also dump to a JSON file for persistence
-        with open("social_context_results.json", "w") as f:
+        # ---- Save to JSON for debugging ----
+        with open("data/social_context_results.json", "w") as f:
             json.dump(self.results, f, indent=2)
 
-        print("Results saved to social_context_results.json")
+        # ---- Save to CSV ----
+        with open("data/social_context_results.csv", "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            # header row
+            writer.writerow([
+                "model",
+                "round",
+                "proposed_rank",
+                "reasoning",
+                "final_rank",
+                "points_after_round"
+            ])
 
+            # write per-LLM history
+            for llm_data in self.llm_histories:
+                model_name = llm_data["model"]
+                for round_data in llm_data["rounds"]:
+                    writer.writerow([
+                        model_name,
+                        round_data["round"],
+                        round_data["proposed_rank"],
+                        round_data["reasoning"],
+                        round_data["final_rank"],
+                        round_data["points_after_round"]
+                    ])
+
+        print("Results saved to social_context_results.json and social_context_results.csv")
+        
 if __name__ == "__main__":
-    game = SocialContext(8, rounds=5, llms=[])
-    print(game.resolve_congestion([
-        [],
-        [],
-        [
-          0,
-          2,
-          3
-        ],
-        [
-          4,
-          5,
-          6,
-          7
-        ],
-        [
-          1
-        ],
-        [],
-        [],
-        []
-    ]))
+    llm_models: list[str] = [
+        "openai/chatgpt-4o-latest",
+        "openai/gpt-3.5-turbo",
+        "google/gemini-2.5-flash",
+        "anthropic/claude-sonnet-4",
+        "deepseek/deepseek-r1-0528-qwen3-8b:free",
+        "meta-llama/llama-4-scout:free",
+        "meta-llama/llama-3.3-8b-instruct:free",
+        "microsoft/phi-3.5-mini-128k-instruct"
+    ]
+
+    llms: list[LLM] = []
+
+    for model in llm_models:
+        llms.append(LLM(model)) 
+
+
+    game = SocialContext(8, rounds=5, llms=llms)
+    game.simulate_game()
