@@ -1,6 +1,7 @@
 from typing import Type
 from helper.game import cost_sharing_scheduling, prisoner_dilemma
 from helper.game import dictator_game
+from helper.game.atomic_congestion import AtomicCongestion
 from helper.game.cost_sharing_scheduling import CostSharingGame
 from helper.game.dictator_game import DictatorGame, SinglePromptTester
 from helper.game.game import Game
@@ -51,6 +52,12 @@ def main():
             print("Setting up Prisoners Dilemma")
             game = PrisonersDilemma(rounds=5, llms=llms)
             game.simulate_game()
+
+        elif game_type is AtomicCongestion:
+            print("Setting up Atomic Congestion")
+            game = AtomicCongestion(rounds=5, llms=llms)
+            game.simulate_game()
+
 
         elif game_type is CostSharingGame:
             print("Setting up Prisoners Dilemma")
