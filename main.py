@@ -1,10 +1,11 @@
 from typing import Type
-from helper.game import cost_sharing_scheduling
+from helper.game import cost_sharing_scheduling, prisoner_dilemma
 from helper.game import dictator_game
 from helper.game.cost_sharing_scheduling import CostSharingGame
 from helper.game.dictator_game import DictatorGame, SinglePromptTester
 from helper.game.game import Game
 from helper.game.gen_coalition import GenCoalitionScenario
+from helper.game.prisoner_dilemma import PrisonersDilemma
 from helper.llm.LLM import LLM
 from helper.game.social_context import SocialContext
 from helper.game.non_atomic import NonAtomicCongestion
@@ -36,8 +37,7 @@ def main():
         llms.append(LLM(model)) 
 
     type_of_games: list[Type[Game]] = [
-            CostSharingGame,
-            DictatorGame
+            PrisonersDilemma
     ]
 
     for game_type in type_of_games:
@@ -47,7 +47,13 @@ def main():
             game = SocialContext(len(llms), rounds=5, llms=llms)
             game.simulate_game()
 
+        elif game_type is PrisonersDilemma:
+            print("Setting up Prisoners Dilemma")
+            game = PrisonersDilemma(rounds=5, llms=llms)
+            game.simulate_game()
+
         elif game_type is CostSharingGame:
+            print("Setting up Prisoners Dilemma")
             single_prompt_tester = cost_sharing_scheduling.SinglePromptTester()
             game = CostSharingGame(single_prompt_tester, cost_sharing_scheduling.ScenarioType.FILLER, llms)
             game.simulate_game()

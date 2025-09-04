@@ -51,17 +51,28 @@ class NonAtomicCongestion(Game):
 
         self.fish_num += delta_fish_count
         self.fishermen_num += delta_fishermen_count
-
+    
     def _ask_for_consumption(self) -> tuple[list[int], list[str]]:
         consumptions = []
         reasonings = []
 
         for index, llm in enumerate(self.llms):
-            value, value_reasoning = llm.ask(
-                self._generate_prompt(index),
-            )
+            try:
+                value, value_reasoning = llm.ask(
+                    self._generate_prompt(index),
+                )
+            except Exception as e:
+                print(f"[Error] LLM {llm.get_model_name()} failed to respond: {e}")
+                value, value_reasoning = 0, "Defaulted to 0 due to error."
+
+            # validate: must be integer between 0 and max_consumption
+            if not isinstance(value, int) or value < 0 or value > self.consumption_limit:
+                print(f"[Warning] Invalid consumption from {llm.get_model_name()}: {value}. Defaulting to 0.")
+                value = 0
+                value_reasoning += " (Invalid response, defaulted to 0.)"
+
             consumptions.append(value)
-            reasonings.append(value_reasoning)
+            reasonings.append(value_reasoning.replace("\n", ""))
 
         return consumptions, reasonings
 

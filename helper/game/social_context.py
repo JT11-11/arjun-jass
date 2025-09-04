@@ -73,24 +73,32 @@ class SocialContext(Game):
             
             self.curr_round += 1
 
-    # returns the proposed rank for each LLM
     def _ask_for_rank(self) -> list[list[int]]:
         ranking = [[] for _ in range(self.rank_no)]
-        reasoning = ["" for _ in range(self.rank_no)]
+        reasoning = ["" for _ in range(len(self.llms))]
 
         for index, llm in enumerate(self.llms):
-            value, value_reasoning = llm.ask(
-                self._generate_prompt(index), 
-            )
-  
-            # assigning to their rank in the array
-            # converting llm rank response to array index
-            ranking[value-1].append(index) 
+            try:
+                value, value_reasoning = llm.ask(
+                    self._generate_prompt(index),
+                )
+            except Exception as e:
+                print(f"[Error] LLM {llm.get_model_name()} failed to respond: {e}")
+                value, value_reasoning = self.rank_no, "Defaulted to lowest rank due to error."
+
+            # validate: must be within 1..rank_no
+            if not isinstance(value, int) or value < 1 or value > self.rank_no:
+                print(f"[Warning] Invalid rank from {llm.get_model_name()}: {value}. Defaulting to {self.rank_no}.")
+                value = self.rank_no
+                value_reasoning += " (Invalid response, defaulted to lowest rank.)"
+
+            # assign to rank index
+            ranking[value - 1].append(index)
             reasoning[index] = value_reasoning.replace("\n", "")
 
         self.lastest_reasoning = reasoning
-        return ranking 
-
+        return ranking
+    
     def resolve_congestion(self, proposed_ranks: List[List[int]]) -> List[int]:
         N = self.rank_no
         # work on a shallow copy of the input lists to avoid mutating caller data / aliasing
