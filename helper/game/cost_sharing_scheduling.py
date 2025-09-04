@@ -138,11 +138,11 @@ import csv
 import os
 
 class CostSharingGame(Game):
-    def __init__(self, single_prompt_tester, scenario_type, llms=[], csv_file="cost_sharing_game_results.csv"):
+    def __init__(self, single_prompt_tester, scenario_type, llms=[], csv_file="data/cost_sharing_game_results.csv"):
         self.single_prompt_tester = single_prompt_tester
         self.scenario_type = scenario_type
         self.llms = llms
-        self.results = {}
+        self.results = [{} for _ in range(len(llms))]
         self.csv_file = csv_file
 
         # Initialize CSV with headers if it doesn't exist
@@ -155,20 +155,20 @@ class CostSharingGame(Game):
                 writer.writeheader()
 
     def simulate_game(self):
-        for llm in self.llms:
+        for llm_index, llm in enumerate(self.llms):
             prompt = self.single_prompt_tester.generate_test_prompt(self.scenario_type)
             response = llm.ask(prompt)
             scenario_info = self.single_prompt_tester.get_scenario_info()
 
             # Save in memory
-            self.results[llm.name] = {
+            self.results[llm_index] = {
                 "prompt": prompt,
                 "response": response,
                 "scenario_info": scenario_info
             }
 
             # Write this single response to CSV immediately
-            self._write_single_response_to_csv(llm.name, response, scenario_info, prompt)
+            self._write_single_response_to_csv(llm.get_model_name(), response, scenario_info, prompt)
 
     def _write_single_response_to_csv(self, llm_name, response, scenario_info, prompt):
         row = {
@@ -176,7 +176,7 @@ class CostSharingGame(Game):
             "response": response,
             "scenario_type": scenario_info["scenario_type"],
             "team_size": scenario_info["team_size"],
-            "team_relationship": scenario_info["team_relationship"],
+            "team_relationship": scenario_info["relationship"],
             "individual_payout": scenario_info["individual_payout"],
             "team_payout": scenario_info["team_payout"],
             "individual_time": scenario_info["individual_time"],

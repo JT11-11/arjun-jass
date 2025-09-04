@@ -71,7 +71,7 @@ class NonAtomicCongestion(Game):
             self.curr_round,
             llm.get_model_name(),  # or llm.name if available
             value,
-            reasoning,
+            reasoning.replace("\n", ""),
             self.fish_num,
             self.fishermen_num
         ])

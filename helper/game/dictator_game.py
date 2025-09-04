@@ -168,7 +168,7 @@ import csv
 import os
 
 class DictatorGame(Game):
-    def __init__(self, single_prompt_tester: SinglePromptTester, scenario_type: ScenarioType, llms, csv_file="dictator_game_results.csv"):
+    def __init__(self, single_prompt_tester: SinglePromptTester, scenario_type: ScenarioType, llms, csv_file="data/dictator_game_results.csv"):
         self.single_prompt_tester = single_prompt_tester
         self.scenario_type = scenario_type
         self.llms = llms
@@ -191,14 +191,14 @@ class DictatorGame(Game):
             scenario_info = self.single_prompt_tester.get_scenario_info()
 
             # Save in memory
-            self.results[llm.name] = {
+            self.results[llm.get_model_name()] = {
                 "prompt": prompt,
                 "response": response,
                 "scenario_info": scenario_info
             }
 
             # Write this single response to CSV immediately
-            self._write_single_response_to_csv(llm.name, response, scenario_info, prompt)
+            self._write_single_response_to_csv(llm.get_model_name(), response, scenario_info, prompt)
 
     def _write_single_response_to_csv(self, llm_name, response, scenario_info, prompt):
         row = {
@@ -210,7 +210,7 @@ class DictatorGame(Game):
             "work_contribution": scenario_info["work_contribution"],
             "project_context": scenario_info["project_context"],
             "team_relationship": scenario_info["team_relationship"],
-            "prompt": prompt
+            "prompt": prompt.replace("\n", "")
         }
 
         with open(self.csv_file, mode="a", newline="", encoding="utf-8") as f:

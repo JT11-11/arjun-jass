@@ -1,13 +1,14 @@
 from random import randrange
 from typing import List
 
+from helper.game.game import Game
 from helper.llm.LLM import LLM
 
 import json
 import csv
 
 # ranking game
-class SocialContext():
+class SocialContext(Game):
     def __init__(self, ranks: int, rounds: int, llms: list[LLM]) -> None:
         self.total_rounds = rounds
         self.curr_round = 0
