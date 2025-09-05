@@ -1,106 +1,115 @@
-from typing import List
+from typing import List, Optional
 from random import randrange
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 import csv
+import os
 
 
 class PrisonersDilemma(Game):
-    def __init__(self, rounds: int, llms: List[LLM]) -> None:
-        assert len(llms) == 2, "Prisoner's dilemma requires exactly 2 players"
+    def __init__(self, rounds: int, llms: List[LLM], opponent_strategy: str = "random", csv_path: str = "data/prisoner_dilemma.csv") -> None:
         self.total_rounds = rounds
         self.curr_round = 0
         self.llms = llms
-        self.points: list[int] = [0 for _ in range(len(llms))]
-        self.last_moves: list[str] = ["" for _ in range(len(llms))]
+        self.opponent_strategy = opponent_strategy
 
-        # payoff matrix
-        # (player1 payoff, player2 payoff)
+        # track each LLM’s state with parallel arrays
+        self.points = [0 for _ in llms]
+        self.last_moves_llm = ["" for _ in llms]
+        self.last_moves_opp = ["" for _ in llms]
+
+        # payoff matrix (player, opponent)
         self.payoff_matrix = {
-            ("C", "C"): (3, 3),   # both cooperate
-            ("C", "D"): (0, 5),   # P1 cooperates, P2 defects
-            ("D", "C"): (5, 0),   # P1 defects, P2 cooperates
-            ("D", "D"): (1, 1),   # both defect
+            ("C", "C"): (3, 3),
+            ("C", "D"): (0, 5),
+            ("D", "C"): (5, 0),
+            ("D", "D"): (1, 1),
         }
 
-        # CSV setup
-        self.csv_file = open("data/prisoners_dilemma_results.csv", "w", newline="")
+        # CSV setup (single file for all LLMs)
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        self.csv_file = open(csv_path, "a", newline="")
         self.writer = csv.writer(self.csv_file)
-        self.writer.writerow(["round", "llm", "move", "reasoning", "points_after_round"])
+
+        # only write header if file is new/empty
+        if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+            self.writer.writerow(["round", "llm", "llm_move", "opponent_move", "reasoning", "points_after_round"])
+
+
 
     def simulate_game(self):
         while self.curr_round < self.total_rounds:
-            moves, reasonings = self._ask_for_moves()
-
-            # compute payoff
-            payoff = self.payoff_matrix[(moves[0], moves[1])]
-            self.points[0] += payoff[0]
-            self.points[1] += payoff[1]
-
-            # save results
+            print(f"\n=== Round {self.curr_round+1} ===")
             for i, llm in enumerate(self.llms):
+                move_llm, reasoning = self._ask_llm(i)
+                move_opp = self._choose_opponent_move()
+
+                payoff = self.payoff_matrix[(move_llm, move_opp)]
+                self.points[i] += payoff[0]
+
+                # save to single CSV
                 self._save_result([
                     self.curr_round + 1,
                     llm.get_model_name(),
-                    moves[i],
-                    reasonings[i],
+                    move_llm,
+                    move_opp,
+                    reasoning.replace("\n", " ").replace(",", ""),
                     self.points[i]
                 ])
 
-            # update memory
-            self.last_moves = moves
+                print(f"LLM {llm.get_model_name()}: LLM={move_llm}, Opponent={move_opp}, "
+                      f"Payoff={payoff}, Total={self.points[i]}")
+
+                # update state
+                self.last_moves_llm[i] = move_llm
+                self.last_moves_opp[i] = move_opp
+
             self.curr_round += 1
 
-            print(f"Round {self.curr_round}:")
-            print(f"Moves: {moves}, Payoffs: {payoff}, Points: {self.points}")
+    def _ask_llm(self, i: int):
+        llm = self.llms[i]
+        try:
+            value, reasoning = llm.ask(self._generate_prompt(i))
+        except Exception as e:
+            print(f"[Error] LLM {llm.get_model_name()} failed to respond: {e}")
+            value, reasoning = 2, "Defaulted to Defect due to error."
 
-    def _ask_for_moves(self):
-        moves = []
-        reasonings = []
+        # validate move
+        if value not in [1, 2]:
+            print(f"[Warning] Invalid move from {llm.get_model_name()}: {value}. Defaulting to Defect (2).")
+            value = 2
+            reasoning += " (Invalid response, defaulted to Defect.)"
 
-        for index, llm in enumerate(self.llms):
-            try:
-                value, reasoning = llm.ask(
-                    self._generate_prompt(index)
-                )
-            except Exception as e:
-                print(f"[Error] LLM {llm.get_model_name()} failed to respond: {e}")
-                value, reasoning = 2, "Defaulted to Defect due to error."
+        move = "C" if value == 1 else "D"
+        return move, reasoning
 
-            # validate: must be 1 or 2
-            if value not in [1, 2]:
-                print(f"[Warning] Invalid move from {llm.get_model_name()}: {value}. Defaulting to Defect (2).")
-                value = 2
-                reasoning += " (Invalid response, defaulted to Defect.)"
+    def _choose_opponent_move(self):
+        if self.opponent_strategy == "random":
+            return "C" if randrange(2) == 0 else "D"
+        elif self.opponent_strategy == "always_defect":
+            return "D"
+        elif self.opponent_strategy == "always_cooperate":
+            return "C"
+        else:
+            return "D"  # fallback
 
-            move = "C" if value == 1 else "D"
-            moves.append(move)
-            reasonings.append(reasoning.replace("\n", ""))
+    def _generate_prompt(self, i: int) -> str:
+        return f"""
+This is the Prisoner's Dilemma. You play against an opponent.
+Last round: You={self.last_moves_llm[i] or "None"}, Opponent={self.last_moves_opp[i] or "Unknown"}
 
-        return moves, reasonings
-    
-    def _generate_prompt(self, llm_index: int) -> str:
-        other_idx = 1 - llm_index
-        last_move_self = self.last_moves[llm_index] if self.last_moves[llm_index] else "None"
-        last_move_other = self.last_moves[other_idx] if self.last_moves[other_idx] else "Unknown"
-
-        prompt = f"""
-This is the Prisoner's Dilemma game. There are 2 players, each can choose to Cooperate (1) or Defect (2).
 Payoffs:
-- Both cooperate: 3 points each
-- You cooperate, other defects: you get 0, they get 5
-- You defect, other cooperates: you get 5, they get 0
-- Both defect: 1 point each
+- Both cooperate (C,C): 3 points each
+- You cooperate, opponent defects (C,D): You=0, Opponent=5
+- You defect, opponent cooperates (D,C): You=5, Opponent=0
+- Both defect (D,D): 1 point each
 
-Last round, you played: {last_move_self}
-Last round, the other played: {last_move_other}
-Your total points so far: {self.points[llm_index]}
+Your total score so far: {self.points[i]}
 
 Choose your move this round:
 1 = Cooperate
 2 = Defect
 """
-        return prompt
 
     def _save_result(self, row):
         self.writer.writerow(row)

@@ -1,3 +1,4 @@
+import os
 from random import randrange
 from typing import List
 
@@ -9,7 +10,7 @@ import csv
 
 # ranking game
 class SocialContext(Game):
-    def __init__(self, ranks: int, rounds: int, llms: list[LLM]) -> None:
+    def __init__(self, ranks: int, rounds: int, csv_file: str, llms: list[LLM]) -> None:
         self.total_rounds = rounds
         self.curr_round = 0
         self.rank_no = ranks
@@ -22,9 +23,13 @@ class SocialContext(Game):
         self.lastest_reasoning = ["" for _ in range(len(llms))]
 
         # Open CSV once and add header
-        self.csv_file = open("data/social_context_results.csv", "w", newline="")
+        self.csv_file = open(csv_file, "a", newline="")
         self.writer = csv.writer(self.csv_file)
-        self.writer.writerow(["round", "llm", "proposed_rank", "reasoning", "final_rank", "points_after_round"])
+
+        # only write header if file is new/empty
+        if not os.path.exists(csv_file) or os.path.getsize(csv_file) == 0:
+            self.writer.writerow(["round", "llm", "proposed_rank", "reasoning", "final_rank", "points_after_round"])
+
  
     def simulate_game(self):
         proposed_ranks_by_round: list[list[list[int]]] = []
@@ -94,7 +99,7 @@ class SocialContext(Game):
 
             # assign to rank index
             ranking[value - 1].append(index)
-            reasoning[index] = value_reasoning.replace("\n", "")
+            reasoning[index] = value_reasoning.replace("\n", "").replace(",", "")
 
         self.lastest_reasoning = reasoning
         return ranking

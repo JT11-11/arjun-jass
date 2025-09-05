@@ -38,29 +38,49 @@ def main():
         llms.append(LLM(model)) 
 
     type_of_games: list[Type[Game]] = [
-            PrisonersDilemma
+            # PrisonersDilemma,
+            # AtomicCongestion,
+            # SocialContext,
+            # NonAtomicCongestion (may need to change numbers)
+            # CostSharingGame,
+            # DictatorGame
     ]
 
+    def reset_llms():
+        for model in llms:
+            model.restart_model()
+
     for game_type in type_of_games:
-
-        if game_type is SocialContext:
-            print("Setting up Social Context")
-            game = SocialContext(len(llms), rounds=5, llms=llms)
-            game.simulate_game()
-
-        elif game_type is PrisonersDilemma:
+        if game_type is PrisonersDilemma:
             print("Setting up Prisoners Dilemma")
             game = PrisonersDilemma(rounds=5, llms=llms)
             game.simulate_game()
 
         elif game_type is AtomicCongestion:
             print("Setting up Atomic Congestion")
-            game = AtomicCongestion(rounds=5, llms=llms)
+            game = AtomicCongestion(total_rounds=5, llms=llms)
             game.simulate_game()
 
+        elif game_type is SocialContext:
+            print("Setting up Social Context")
+            game = SocialContext(len(llms), rounds=5, csv_file="data/social_context_results.csv", llms=llms)
+            game.simulate_game()
+
+        elif game_type is NonAtomicCongestion:
+            print("Setting up Non Atomic Congestive Scenario")
+            # initialize the game
+            game = NonAtomicCongestion(
+                init_fish_num=500,    # starting fish population (healthy bay)
+                fishermen_num=10,     # number of fishing crews
+                max_consumption=10,   # each crew can catch up to 10 per round
+                total_rounds=15,      # run for 15 days/rounds
+                llms=llms
+            )
+
+            game.simulate_game()
 
         elif game_type is CostSharingGame:
-            print("Setting up Prisoners Dilemma")
+            print("Setting up Cost Sharing")
             single_prompt_tester = cost_sharing_scheduling.SinglePromptTester()
             game = CostSharingGame(single_prompt_tester, cost_sharing_scheduling.ScenarioType.FILLER, llms)
             game.simulate_game()
@@ -74,20 +94,6 @@ def main():
                     M=2.0,
                     llms=llms
             )
-            game.simulate_game()
-
-
-        elif game_type is NonAtomicCongestion:
-            print("Setting up Non Atomic Congestive Scenario")
-            # initialize the game
-            game = NonAtomicCongestion(
-                init_fish_num=500,    # starting fish population (healthy bay)
-                fishermen_num=10,     # number of fishing crews
-                max_consumption=10,   # each crew can catch up to 10 per round
-                total_rounds=15,      # run for 15 days/rounds
-                llms=llms
-            )
-
             game.simulate_game()
 
         elif game_type is HedonicGame:
@@ -139,6 +145,8 @@ def main():
             single_prompt_tester = dictator_game.SinglePromptTester()
             game = DictatorGame(single_prompt_tester, dictator_game.ScenarioType.SINGLE_RECIPIENT, llms)
             game.simulate_game()
+
+        reset_llms()
 
 
 if __name__ == "__main__":

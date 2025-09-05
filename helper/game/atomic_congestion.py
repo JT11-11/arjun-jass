@@ -1,90 +1,107 @@
 import csv
+import os
+from random import randrange
+from typing import List
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 
 
 class AtomicCongestion(Game):
-    def __init__(self, total_rounds: int, llms: list[LLM]) -> None:
-        assert len(llms) == 2, "Atomic Congestion requires exactly 2 players"
+    def __init__(self, total_rounds: int, llms: List[LLM], opponent_strategy: str = "random", csv_path: str = "data/atomic_congestion_all.csv") -> None:
         self.total_rounds = total_rounds
         self.curr_round = 0
         self.llms = llms
+        self.opponent_strategy = opponent_strategy
 
-        # store cumulative travel times (lower = better)
-        self.travel_times: list[int] = [0 for _ in range(len(llms))]
-        self.last_moves: list[str] = ["" for _ in range(len(llms))]
+        # state tracked in parallel arrays
+        self.travel_times = [0 for _ in llms]
+        self.last_moves_llm = ["" for _ in llms]
+        self.last_moves_opp = ["" for _ in llms]
 
         # payoff matrix (Route 1 = Defect, Route 2 = Cooperate)
-        # returns (p1_time, p2_time)
+        # returns (player_time, opponent_time)
         self.travel_time_matrix = {
-            ("R1", "R1"): (6, 6),   # both Route 1 -> congestion
-            ("R1", "R2"): (2, 4),   # R1 fast, R2 slow
-            ("R2", "R1"): (4, 2),   # symmetric
-            ("R2", "R2"): (4, 4),   # both cooperate
+            ("R1", "R1"): (6, 6),
+            ("R1", "R2"): (2, 4),
+            ("R2", "R1"): (4, 2),
+            ("R2", "R2"): (4, 4),
         }
 
-        # open CSV for saving results
-        self.csv_file = open("data/atomic_congestion_results.csv", "w", newline="")
+        self.csv_file = open(csv_path, "a", newline="")
         self.writer = csv.writer(self.csv_file)
-        self.writer.writerow(["round", "llm", "choice", "reasoning", "travel_time", "cumulative_time"])
+
+        # only write header if file is new/empty
+        if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+            self.writer.writerow([
+                "round",
+                "llm",
+                "llm_choice",
+                "opponent_choice",
+                "reasoning",
+                "travel_time",
+                "cumulative_time"
+            ])
 
     def simulate_game(self):
         while self.curr_round < self.total_rounds:
-            moves, reasonings = self._ask_for_moves()
-
-            # compute travel times from matrix
-            outcome = self.travel_time_matrix[(moves[0], moves[1])]
-            self.travel_times[0] += outcome[0]
-            self.travel_times[1] += outcome[1]
-
-            # save results for each LLM
+            print(f"\n=== Round {self.curr_round+1} ===")
             for i, llm in enumerate(self.llms):
+                move_llm, reasoning = self._ask_llm(i)
+                move_opp = self._choose_opponent_move()
+
+                outcome = self.travel_time_matrix[(move_llm, move_opp)]
+                self.travel_times[i] += outcome[0]  # only track LLM’s time
+
+                # save to one CSV file
                 self._save_result([
                     self.curr_round + 1,
                     llm.get_model_name(),
-                    moves[i],
-                    reasonings[i],
-                    outcome[i],
+                    move_llm,
+                    move_opp,
+                    reasoning.replace("\n", " ").replace(",", ""),
+                    outcome[0],
                     self.travel_times[i]
                 ])
 
-            # update memory
-            self.last_moves = moves
-            self.curr_round += 1
+                print(f"LLM {llm.get_model_name()}: LLM={move_llm}, Opponent={move_opp}, "
+                      f"RoundTime={outcome[0]}, TotalTime={self.travel_times[i]}")
 
-            print(f"Round {self.curr_round}: Moves={moves}, Times={outcome}, Totals={self.travel_times}")
+                # update state
+                self.last_moves_llm[i] = move_llm
+                self.last_moves_opp[i] = move_opp
+
+            self.curr_round += 1
 
         self.close_results()
 
-    def _ask_for_moves(self):
-        moves = []
-        reasonings = []
+    def _ask_llm(self, i: int):
+        llm = self.llms[i]
+        try:
+            value, reasoning = llm.ask(self._generate_prompt(i))
+        except Exception as e:
+            print(f"[Error] LLM {llm.get_model_name()} failed: {e}")
+            value, reasoning = 2, "Defaulted to Route 2 due to error."
 
-        for index, llm in enumerate(self.llms):
-            try:
-                value, reasoning = llm.ask(self._generate_prompt(index))
-            except Exception as e:
-                print(f"[Error] LLM {llm.get_model_name()} failed: {e}")
-                value, reasoning = 2, "Defaulted to Route 2 due to error."
+        # validate move
+        if not isinstance(value, int) or value not in [1, 2]:
+            print(f"[Warning] Invalid choice from {llm.get_model_name()}: {value}. Defaulting to Route 2.")
+            value = 2
+            reasoning += " (Invalid response, defaulted to Route 2.)"
 
-            # validate response: must be 1 or 2
-            if not isinstance(value, int) or value not in [1, 2]:
-                print(f"[Warning] Invalid choice from {llm.get_model_name()}: {value}. Defaulting to Route 2.")
-                value = 2
-                reasoning += " (Invalid response, defaulted to Route 2.)"
+        move = "R1" if value == 1 else "R2"
+        return move, reasoning
 
-            # map integer → route string
-            move = "R1" if value == 1 else "R2"
-            moves.append(move)
-            reasonings.append(reasoning.replace("\n", ""))
+    def _choose_opponent_move(self):
+        if self.opponent_strategy == "random":
+            return "R1" if randrange(2) == 0 else "R2"
+        elif self.opponent_strategy == "always_r1":
+            return "R1"
+        elif self.opponent_strategy == "always_r2":
+            return "R2"
+        else:
+            return "R2"  # fallback
 
-        return moves, reasonings
-
-    def _generate_prompt(self, llm_index: int) -> str:
-        other_idx = 1 - llm_index
-        last_self = self.last_moves[llm_index] if self.last_moves[llm_index] else "None"
-        last_other = self.last_moves[other_idx] if self.last_moves[other_idx] else "Unknown"
-
+    def _generate_prompt(self, i: int) -> str:
         return f"""
 You and I are both drivers trying to travel from Point A to Point B. We each have to choose one of two possible routes: Route 1 or Route 2.
 
@@ -98,11 +115,10 @@ In this setup:
 - Route 2 = Cooperate (accept longer travel, reduce congestion).
 
 We make our decisions simultaneously, without knowing the other’s choice.
-This is a one-shot game.
 
-Last round, you played: {last_self}
-Last round, the other played: {last_other}
-Your total travel time so far: {self.travel_times[llm_index]}
+Last round, you played: {self.last_moves_llm[i] or "None"}
+Last round, the opponent played: {self.last_moves_opp[i] or "Unknown"}
+Your total travel time so far: {self.travel_times[i]}
 
 Choose your move this round:
 1 = Route 1

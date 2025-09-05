@@ -166,56 +166,76 @@ class SinglePromptTester:
 
 import csv
 import os
+from helper.game.game import Game
 
 class DictatorGame(Game):
-    def __init__(self, single_prompt_tester: SinglePromptTester, scenario_type: ScenarioType, llms, csv_file="data/dictator_game_results.csv"):
+    def __init__(self, single_prompt_tester: "SinglePromptTester", scenario_type: "ScenarioType", llms, csv_file="data/dictator_game_results.csv"):
         self.single_prompt_tester = single_prompt_tester
         self.scenario_type = scenario_type
         self.llms = llms
         self.results = {}
         self.csv_file = csv_file
 
-        # Initialize CSV with headers if it doesn't exist
-        if not os.path.exists(self.csv_file):
-            with open(self.csv_file, mode="w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=[
-                    "llm_name", "response", "scenario_type", "endowment", "num_recipients",
-                    "work_contribution", "project_context", "team_relationship", "prompt"
-                ])
-                writer.writeheader()
+        # consistent fieldnames
+        self.fieldnames = [
+            "llm_name", 
+            "response", 
+            "scenario_type", 
+            "endowment", 
+            "num_recipients",
+            "work_contribution", 
+            "project_context", 
+            "team_relationship", 
+            "prompt"
+        ]
+
+        # open the file once and keep writer as an attribute
+        file_exists = os.path.exists(self.csv_file)
+        self.csv_handle = open(self.csv_file, mode="a", newline="", encoding="utf-8")
+        self.writer = csv.DictWriter(self.csv_handle, fieldnames=self.fieldnames)
+
+        # write header if file is new
+        if not file_exists:
+            self.writer.writeheader()
+            self.csv_handle.flush()
 
     def simulate_game(self):
         for llm in self.llms:
             prompt = self.single_prompt_tester.generate_test_prompt(self.scenario_type)
-            response = llm.ask(prompt)  # get LLM response
+            value, reasoning = llm.ask(prompt)  # expect (value, reasoning)
             scenario_info = self.single_prompt_tester.get_scenario_info()
 
             # Save in memory
             self.results[llm.get_model_name()] = {
                 "prompt": prompt,
-                "response": response,
+                "response": reasoning,
                 "scenario_info": scenario_info
             }
 
-            # Write this single response to CSV immediately
-            self._write_single_response_to_csv(llm.get_model_name(), response, scenario_info, prompt)
+            # Append to CSV
+            self._write_single_response_to_csv(llm.get_model_name(), reasoning, scenario_info, prompt)
 
     def _write_single_response_to_csv(self, llm_name, response, scenario_info, prompt):
         row = {
             "llm_name": llm_name,
-            "response": response,
+            "response": response.replace("\n", " ").replace(",", " "),
             "scenario_type": scenario_info["scenario_type"],
             "endowment": scenario_info["endowment"],
             "num_recipients": scenario_info["num_recipients"],
             "work_contribution": scenario_info["work_contribution"],
             "project_context": scenario_info["project_context"],
             "team_relationship": scenario_info["team_relationship"],
-            "prompt": prompt.replace("\n", "")
+            "prompt": prompt.replace("\n", " ").replace(",", " ")
         }
 
-        with open(self.csv_file, mode="a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=row.keys())
-            writer.writerow(row)
+        self.writer.writerow(row)
+        self.csv_handle.flush()
 
     def get_results(self):
         return self.results
+
+    def close(self):
+        """Close the CSV file handle when done."""
+        if self.csv_handle:
+            self.csv_handle.close()
+            self.csv_handle = None

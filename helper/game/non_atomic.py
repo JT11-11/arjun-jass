@@ -1,9 +1,10 @@
 import csv
+import os
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 
 class NonAtomicCongestion(Game):
-    def __init__(self, init_fish_num, fishermen_num, max_consumption, total_rounds, llms):
+    def __init__(self, init_fish_num, fishermen_num, max_consumption, total_rounds, llms, csv_file="data/non_atmoic_results.csv"):
         self.fish_num = init_fish_num    
         self.fishermen_num = fishermen_num
         self.consumption_limit = max_consumption
@@ -18,9 +19,13 @@ class NonAtomicCongestion(Game):
         self.quitting_rate = 0.1
 
         # open CSV for saving results
-        self.csv_file = open("data/non_atomic_results.csv", "w", newline="")
+        self.csv_file = open("data/non_atomic_results.csv", "a", newline="")
         self.writer = csv.writer(self.csv_file)
-        self.writer.writerow(["round", "llm", "consumption", "reasoning", "fish_num", "fishermen_num"])
+
+        # only write header if file is new/empty
+        if not os.path.exists(csv_file) or os.path.getsize(csv_file) == 0:
+            self.writer.writerow(["round", "llm", "consumption", "reasoning", "fish_num", "fishermen_num"])
+
 
     def simulate_game(self):
         while self.curr_round < self.total_rounds and self.fish_num > 0:
@@ -72,7 +77,7 @@ class NonAtomicCongestion(Game):
                 value_reasoning += " (Invalid response, defaulted to 0.)"
 
             consumptions.append(value)
-            reasonings.append(value_reasoning.replace("\n", ""))
+            reasonings.append(value_reasoning.replace("\n", "").replace(",", ""))
 
         return consumptions, reasonings
 
@@ -82,7 +87,7 @@ class NonAtomicCongestion(Game):
             self.curr_round,
             llm.get_model_name(),  # or llm.name if available
             value,
-            reasoning.replace("\n", ""),
+            reasoning.replace("\n", "").replace(",", ""),
             self.fish_num,
             self.fishermen_num
         ])

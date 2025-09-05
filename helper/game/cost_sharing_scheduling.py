@@ -99,7 +99,7 @@ OPTION 2 (Coordinated Booking): Book the room for {config.team_time} when everyo
 - Everyone works together on the presentation and leaves together at {config.team_time}
 - The timing works well for the whole team's schedule
 
-Which time slot do you book the meeting room for? Please respond with either 'Early Booking' or 'Coordinated Booking' and briefly explain your reasoning."""
+Which time slot do you book the meeting room for? Please respond with either 1 or 2 in the value key and briefly explain your reasoning."""
 
         return prompt
 
@@ -136,6 +136,7 @@ class SinglePromptTester:
 
 import csv
 import os
+from helper.game.game import Game
 
 class CostSharingGame(Game):
     def __init__(self, single_prompt_tester, scenario_type, llms=[], csv_file="data/cost_sharing_game_results.csv"):
@@ -145,35 +146,52 @@ class CostSharingGame(Game):
         self.results = [{} for _ in range(len(llms))]
         self.csv_file = csv_file
 
-        # Initialize CSV with headers if it doesn't exist
-        if not os.path.exists(self.csv_file):
-            with open(self.csv_file, mode="w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=[
-                    "llm_name", "response", "scenario_type", "team_size", "team_relationship",
-                    "individual_payout", "team_payout", "individual_time", "team_time", "prompt"
-                ])
-                writer.writeheader()
+        # consistent fieldnames
+        self.fieldnames = [
+            "llm_name", 
+            "option_chosen",
+            "response", 
+            "scenario_type", 
+            "team_size", 
+            "team_relationship",
+            "individual_payout", 
+            "team_payout", 
+            "individual_time", 
+            "team_time", 
+            "prompt"
+        ]
+
+        # open the file once and keep writer as an attribute
+        file_exists = os.path.exists(self.csv_file)
+        self.csv_handle = open(self.csv_file, mode="a", newline="", encoding="utf-8")
+        self.writer = csv.DictWriter(self.csv_handle, fieldnames=self.fieldnames)
+
+        # write header if file is new
+        if not file_exists:
+            self.writer.writeheader()
+            self.csv_handle.flush()
 
     def simulate_game(self):
         for llm_index, llm in enumerate(self.llms):
             prompt = self.single_prompt_tester.generate_test_prompt(self.scenario_type)
-            response = llm.ask(prompt)
+            value, reasoning = llm.ask(prompt)  # expect (value, reasoning)
             scenario_info = self.single_prompt_tester.get_scenario_info()
 
             # Save in memory
             self.results[llm_index] = {
                 "prompt": prompt,
-                "response": response,
+                "response": reasoning,
                 "scenario_info": scenario_info
             }
 
-            # Write this single response to CSV immediately
-            self._write_single_response_to_csv(llm.get_model_name(), response, scenario_info, prompt)
+            # Append to CSV
+            self._write_single_response_to_csv(llm.get_model_name(), value, reasoning, scenario_info, prompt)
 
-    def _write_single_response_to_csv(self, llm_name, response, scenario_info, prompt):
+    def _write_single_response_to_csv(self, llm_name, option_chosen, response, scenario_info, prompt):
         row = {
             "llm_name": llm_name,
-            "response": response,
+            "option_chosen": option_chosen,
+            "response": response.replace("\n", " ").replace(",", " "),
             "scenario_type": scenario_info["scenario_type"],
             "team_size": scenario_info["team_size"],
             "team_relationship": scenario_info["relationship"],
@@ -181,11 +199,17 @@ class CostSharingGame(Game):
             "team_payout": scenario_info["team_payout"],
             "individual_time": scenario_info["individual_time"],
             "team_time": scenario_info["team_time"],
-            "prompt": prompt
+            "prompt": prompt.replace("\n", " ").replace(",", " ")
         }
-        with open(self.csv_file, mode="a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=row.keys())
-            writer.writerow(row)
+
+        self.writer.writerow(row)
+        self.csv_handle.flush()  # make sure data is written immediately
 
     def get_results(self):
         return self.results
+
+    def close(self):
+        """Close the CSV file handle when done."""
+        if self.csv_handle:
+            self.csv_handle.close()
+            self.csv_handle = None
