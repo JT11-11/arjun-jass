@@ -169,9 +169,21 @@ import os
 from helper.game.game import Game
 
 class DictatorGame(Game):
-    def __init__(self, single_prompt_tester: "SinglePromptTester", scenario_type: "ScenarioType", llms, csv_file="data/dictator_game_results.csv"):
-        self.single_prompt_tester = single_prompt_tester
-        self.scenario_type = scenario_type
+    def __init__(self, config: Dict, llms, csv_file="data/dictator_game_results.csv"):
+        self.single_prompt_tester = SinglePromptTester()
+
+        assert "scenario_type" in config
+
+        match config["scenario_type"]:
+            case "SINGLE_RECIPIENT":
+                self.scenario_type = ScenarioType.SINGLE_RECIPIENT
+            case "MULTIPLE_MUST_DONATE":
+                self.scenario_type = ScenarioType.MULTIPLE_MUST_DONATE
+            case "MULTIPLE_OPTIONAL":
+                self.scenario_type = ScenarioType.MULTIPLE_OPTIONAL
+            case _:
+                self.scenario_type = ScenarioType.SINGLE_RECIPIENT
+
         self.llms = llms
         self.results = {}
         self.csv_file = csv_file

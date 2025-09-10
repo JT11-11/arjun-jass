@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 from random import randrange
 from helper.game.game import Game
 from helper.llm.LLM import LLM
@@ -7,11 +7,19 @@ import os
 
 
 class PrisonersDilemma(Game):
-    def __init__(self, rounds: int, llms: List[LLM], opponent_strategy: str = "random", csv_path: str = "data/prisoner_dilemma.csv") -> None:
-        self.total_rounds = rounds
+    def __init__(self, config: Dict, csv_save: str = "data/prisoner_dilemma.csv", llms: List[LLM] = [], opponent_strategy: str = "random") -> None:
+        # {'simulate_rounds': '10', 'rounds': '5', 'prompt': 'asdf'}
+
+        assert 'rounds' in config
+        assert 'prompt' in config
+
+        print("Game Initalized")
+
+        self.total_rounds = config['rounds']
         self.curr_round = 0
         self.llms = llms
         self.opponent_strategy = opponent_strategy
+        self.prompt = config['prompt']
 
         # track each LLM’s state with parallel arrays
         self.points = [0 for _ in llms]
@@ -27,12 +35,12 @@ class PrisonersDilemma(Game):
         }
 
         # CSV setup (single file for all LLMs)
-        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-        self.csv_file = open(csv_path, "a", newline="")
+        os.makedirs(os.path.dirname(csv_save), exist_ok=True)
+        self.csv_file = open(csv_save, "a", newline="")
         self.writer = csv.writer(self.csv_file)
 
         # only write header if file is new/empty
-        if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+        if not os.path.exists(csv_save) or os.path.getsize(csv_save) == 0:
             self.writer.writerow(["round", "llm", "llm_move", "opponent_move", "reasoning", "points_after_round"])
 
 

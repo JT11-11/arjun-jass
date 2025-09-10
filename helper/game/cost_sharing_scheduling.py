@@ -139,9 +139,19 @@ import os
 from helper.game.game import Game
 
 class CostSharingGame(Game):
-    def __init__(self, single_prompt_tester, scenario_type, llms=[], csv_file="data/cost_sharing_game_results.csv"):
-        self.single_prompt_tester = single_prompt_tester
-        self.scenario_type = scenario_type
+    def __init__(self, config: Dict, llms=[], csv_file="data/cost_sharing_game_results.csv"):
+        
+        assert "scenario_type" in config
+
+        match config["scenario_type"]:
+            case "FILLER":
+                self.scenario_type = ScenarioType.FILLER
+            case "WIN_WIN":
+                self.scenario_type = ScenarioType.WIN_WIN
+            case _:
+                self.scenario_type = ScenarioType.FILLER
+
+        self.single_prompt_tester = SinglePromptTester()
         self.llms = llms
         self.results = [{} for _ in range(len(llms))]
         self.csv_file = csv_file

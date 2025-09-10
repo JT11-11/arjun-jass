@@ -1,42 +1,33 @@
 import csv
 from typing import Type
-from helper.game import cost_sharing_scheduling, prisoner_dilemma
-from helper.game import dictator_game
+
 from helper.game.atomic_congestion import AtomicCongestion
 from helper.game.cost_sharing_scheduling import CostSharingGame
-from helper.game.dictator_game import DictatorGame, ScenarioType, SinglePromptTester
+from helper.game.dictator_game import DictatorGame
 from helper.game.game import Game
-from helper.game.gen_coalition import GenCoalitionScenario
-from helper.game.prisoner_dilemma import PrisonersDilemma
-from helper.llm.LLM import LLM
-from helper.game.social_context import SocialContext
 from helper.game.non_atomic import NonAtomicCongestion
-from helper.game.hedonic_game import HedonicGame
+from helper.game.social_context import SocialContext
+from helper.llm.LLM import LLM
 
-from dotenv import load_dotenv
+from helper.game.prisoner_dilemma import PrisonersDilemma
 
-def main():
 
-    load_dotenv()
-
-    print("Simulations have started")
-    print("Currently Running games")
-
+if __name__ == "__main__":
     type_of_games: list[Type[Game]] = [
-            PrisonersDilemma,
-            AtomicCongestion,
-            SocialContext,
-            NonAtomicCongestion,
-            CostSharingGame,
+            # PrisonersDilemma,
+            # AtomicCongestion,
+            # SocialContext,
+            # NonAtomicCongestion
+            # CostSharingGame,
             DictatorGame
     ]
 
     file_names: list[str] = [
-            "PrisonnersDilemma.csv",
-            "AtomicCongestion.csv",
-            "SocialContext.csv",
-            "NonAtomicCongestion.csv",
-            "CostSharingGame.csv",
+            # "PrisonnersDilemma.csv"
+            # "AtomicCongestion.csv",
+            # "SocialContext.csv",
+            # "NonAtomicCongestion.csv",
+            # "CostSharingGame.csv",
             "DictatorGame.csv"
     ]
 
@@ -58,6 +49,7 @@ def main():
         llms.append(LLM(model)) 
 
 
+
     def reset_llms():
         for model in llms:
             model.restart_model()
@@ -74,6 +66,3 @@ def main():
                     curr_game = type_of_games[index](game_config, llms=llms)
                     curr_game.simulate_game()
                     reset_llms()
-
-if __name__ == "__main__":
-    main()

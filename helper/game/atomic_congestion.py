@@ -1,14 +1,19 @@
 import csv
 import os
 from random import randrange
-from typing import List
+from typing import Dict, List
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 
 
 class AtomicCongestion(Game):
-    def __init__(self, total_rounds: int, llms: List[LLM], opponent_strategy: str = "random", csv_path: str = "data/atomic_congestion_all.csv") -> None:
-        self.total_rounds = total_rounds
+    def __init__(self, config: Dict, csv_save: str = "data/atomic_congestion_all.csv", llms: List[LLM]=[], opponent_strategy: str = "random") -> None:
+
+        assert "total_rounds" in config
+
+        print("Game INit")
+
+        self.total_rounds = config["total_rounds"]
         self.curr_round = 0
         self.llms = llms
         self.opponent_strategy = opponent_strategy
@@ -27,11 +32,11 @@ class AtomicCongestion(Game):
             ("R2", "R2"): (4, 4),
         }
 
-        self.csv_file = open(csv_path, "a", newline="")
+        self.csv_file = open(csv_save, "a", newline="")
         self.writer = csv.writer(self.csv_file)
 
         # only write header if file is new/empty
-        if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+        if not os.path.exists(csv_save) or os.path.getsize(csv_save) == 0:
             self.writer.writerow([
                 "round",
                 "llm",

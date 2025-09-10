@@ -1,0 +1,5 @@
+simulate_rounds,prompt,scenario_type
+10,asdf,SINGLE_RECIPIENT
+10,asdf,MULTIPLE_MUST_DONATE
+10,asdf,MULTIPLE_OPTIONAL
+

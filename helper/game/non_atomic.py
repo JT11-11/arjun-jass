@@ -1,14 +1,21 @@
 import csv
 import os
+from typing import Dict
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 
 class NonAtomicCongestion(Game):
-    def __init__(self, init_fish_num, fishermen_num, max_consumption, total_rounds, llms, csv_file="data/non_atmoic_results.csv"):
-        self.fish_num = init_fish_num    
-        self.fishermen_num = fishermen_num
-        self.consumption_limit = max_consumption
-        self.total_rounds = total_rounds
+    def __init__(self, config: Dict, llms, csv_file="data/non_atomic_results.csv"):
+
+        assert "init_fish_num" in config
+        assert "fishermen_num" in config
+        assert "max_consumption" in config
+        assert "total_rounds" in config
+
+        self.fish_num = config["init_fish_num"]
+        self.fishermen_num = config["fishermen_num"]
+        self.consumption_limit = config["max_consumption"]
+        self.total_rounds = config["total_rounds"]
         self.curr_round = 0
         self.llms = llms
 
@@ -19,7 +26,7 @@ class NonAtomicCongestion(Game):
         self.quitting_rate = 0.1
 
         # open CSV for saving results
-        self.csv_file = open("data/non_atomic_results.csv", "a", newline="")
+        self.csv_file = open(csv_file, "a", newline="")
         self.writer = csv.writer(self.csv_file)
 
         # only write header if file is new/empty

@@ -10,10 +10,10 @@ import csv
 
 # ranking game
 class SocialContext(Game):
-    def __init__(self, ranks: int, rounds: int, csv_file: str, llms: list[LLM]) -> None:
+    def __init__(self, rounds: int, csv_file: str="data/social_context_results.csv", llms: list[LLM]=[]) -> None:
         self.total_rounds = rounds
         self.curr_round = 0
-        self.rank_no = ranks
+        self.rank_no = len(llms)
         self.points: list[int] = [0 for _ in range(len(llms))]
         self.last_round_ranks: list[int] = [-1 for _ in range(len(llms))]
         self.llms = llms
