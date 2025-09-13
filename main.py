@@ -23,6 +23,12 @@ def main():
     print("Simulations have started")
     print("Currently Running games")
 
+    """
+    game_info: list[Dict: {
+        "game_type": Type[Game] (The type of game which will be ran)
+        "file": str (The config file stored in /config directory)
+    }]
+    """
     game_info = [
         # {"game_type": PrisonersDilemma, "file": "PrisonnersDilemma.csv"},
         # {"game_type": AtomicCongestion, "file": "AtomicCongestion.csv"},
@@ -33,6 +39,10 @@ def main():
     ]
 
 
+    """
+        llm_models: list[str] the different model names 
+        which are dependency injection for the llm interface
+    """
     llm_models: list[str] = [
         "openai/chatgpt-4o-latest",
         "openai/gpt-3.5-turbo",
@@ -55,9 +65,8 @@ def main():
             model.restart_model()
 
     for info in game_info:
-        print("File Opened")
         with open("config/" + info["file"]) as config_file:
-            print("File Opened")
+            print("Config File Opened")
             game_configurations = csv.DictReader(config_file)
 
             for game_config in game_configurations:

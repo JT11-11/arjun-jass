@@ -7,6 +7,10 @@ class AnswerFormat(BaseModel):
     reasoning: str
     value: int
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 class LLM():
     def __init__(self, model) -> None:
         self.client = OpenAI(
