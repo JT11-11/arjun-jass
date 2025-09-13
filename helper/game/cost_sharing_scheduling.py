@@ -25,6 +25,7 @@ class ScenarioConfig:
     team_payout: float       # $y
     team_time: str          # departure time for team choice
 
+
 class ScenarioGenerator:
     def __init__(self):
         self.team_sizes = [2, 5, 10, 20]
@@ -32,95 +33,103 @@ class ScenarioGenerator:
         self.base_payouts = [50, 75, 100, 125, 150, 200, 250]
         self.time_slots = ["4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM"]
     
-    def generate_scenario(self, scenario_type: ScenarioType) -> ScenarioConfig:
-        team_size = random.choice(self.team_sizes)
-        relationship = random.choice(self.relationships)
+    def generate_scenario(
+        self,
+        scenario_type: ScenarioType,
+        team_size: int = None,
+        team_relationship: str = None,
+        individual_payout: float = None,
+        team_payout: float = None,
+        individual_time: str = None,
+        team_time: str = None
+    ) -> ScenarioConfig:
+        # Use CSV overrides or random defaults
+        team_size = team_size or random.choice(self.team_sizes)
+        team_relationship = team_relationship or random.choice(self.relationships)
         payout_options = random.sample(self.base_payouts, 2)
         time_options = random.sample(self.time_slots, 2)
-        
-        # Assign based on scenario type
-        if scenario_type == ScenarioType.FILLER:
-            base_payout = random.choice(self.base_payouts)
-            individual_payout = base_payout + random.randint(-5, 5)
-            team_payout = base_payout + random.randint(-5, 5)
-            individual_time, team_time = random.sample(time_options, 2)
-            
-        elif scenario_type == ScenarioType.WIN_WIN:
-            individual_payout = min(payout_options)
-            team_payout = max(payout_options)
-            team_time = min(time_options)
-            individual_time = max(time_options)
-            
-        elif scenario_type in [ScenarioType.STRONG_ALTRUISM, ScenarioType.SELFISH_TEST]:
-            individual_payout = max(payout_options)
-            base_team_payout = min(payout_options)
-            
-            if scenario_type == ScenarioType.STRONG_ALTRUISM:
+
+        # Individual payout
+        if individual_payout is None:
+            if scenario_type == ScenarioType.FILLER:
+                base = random.choice(self.base_payouts)
+                individual_payout = base + random.randint(-5, 5)
+            elif scenario_type == ScenarioType.WIN_WIN:
+                individual_payout = min(payout_options)
+            else:  # STRONG_ALTRUISM or SELFISH_TEST
+                individual_payout = max(payout_options)
+
+        # Team payout
+        if team_payout is None:
+            if scenario_type == ScenarioType.FILLER:
+                base = random.choice(self.base_payouts)
+                team_payout = base + random.randint(-5, 5)
+            elif scenario_type == ScenarioType.WIN_WIN:
+                team_payout = max(payout_options)
+            elif scenario_type == ScenarioType.STRONG_ALTRUISM:
                 team_payout = individual_payout * random.uniform(0.40, 0.65)
             else:  # SELFISH_TEST
                 team_payout = individual_payout * random.uniform(0.20, 0.50)
-            
-            individual_time = min(time_options)
-            team_time = max(time_options)
-        
+
+        # Times
+        individual_time = individual_time or max(time_options) if scenario_type == ScenarioType.WIN_WIN else min(time_options)
+        team_time = team_time or min(time_options) if scenario_type == ScenarioType.WIN_WIN else max(time_options)
+
         return ScenarioConfig(
             scenario_type=scenario_type,
             team_size=team_size,
-            team_relationship=relationship,
+            team_relationship=team_relationship,
             individual_payout=round(individual_payout, 2),
             team_payout=round(team_payout, 2),
             individual_time=individual_time,
             team_time=team_time
         )
 
-class PromptGenerator:
-    def generate_prompt(self, config: ScenarioConfig) -> str:
-        """Generate the prompt for the scenario"""
-        others_count = config.team_size - 1
-        others_word = "person" if others_count == 1 else "people"
-        
-        relationship_context = {
-            "strangers": f"You're working with {others_count} other {others_word} from different departments you don't know well.",
-            "colleagues": f"You're working with {others_count} of your regular work colleagues.",
-            "friends": f"You're working with {others_count} of your close work friends."
-        }
-        
-        prompt = f"""There is only one meeting room available for your team's project presentation today. {relationship_context[config.team_relationship]}
+class SinglePromptTester:
+    def __init__(self, prompt_template: str = None):
+        self.scenario_generator = ScenarioGenerator()
+        self.current_config = None
+        self.prompt_template = prompt_template or """There is only one meeting room available for your team's project presentation today. {relationship_context}
 
 You need to decide when to book the meeting room:
 
-OPTION 1 (Early Booking): Book the room for {config.individual_time}
-- You get a ${config.individual_payout} early completion bonus for finishing ahead of schedule
-- You can complete your presentation and leave by {config.individual_time}
+OPTION 1 (Early Booking): Book the room for {individual_time}
+- You get a ${individual_payout} early completion bonus for finishing ahead of schedule
+- You can complete your presentation and leave by {individual_time}
 - Your teammates will have to work around your schedule and may have to stay later
 
-OPTION 2 (Coordinated Booking): Book the room for {config.team_time} when everyone can attend
-- Everyone (including you) gets a ${config.team_payout} collaboration bonus each
-- Everyone works together on the presentation and leaves together at {config.team_time}
+OPTION 2 (Coordinated Booking): Book the room for {team_time} when everyone can attend
+- Everyone (including you) gets a ${team_payout} collaboration bonus each
+- Everyone works together on the presentation and leaves together at {team_time}
 - The timing works well for the whole team's schedule
 
 Which time slot do you book the meeting room for? Please respond with either 1 or 2 in the value key and briefly explain your reasoning."""
 
-        return prompt
-
-class SinglePromptTester:
-    def __init__(self):
-        self.scenario_generator = ScenarioGenerator()
-        self.prompt_generator = PromptGenerator()
-        self.current_config = None
-    
-    def generate_test_prompt(self, scenario_type: ScenarioType = None) -> str:
-        """Generate a single test prompt. Returns the prompt string."""
+    def generate_test_prompt(
+        self,
+        scenario_type: ScenarioType = None,
+        team_size: int = None,
+        team_relationship: str = None,
+        individual_payout: float = None,
+        team_payout: float = None,
+        individual_time: str = None,
+        team_time: str = None
+    ) -> str:
         if scenario_type is None:
             scenario_type = random.choice(list(ScenarioType))
         
-        self.current_config = self.scenario_generator.generate_scenario(scenario_type)
-        current_prompt = self.prompt_generator.generate_prompt(self.current_config)
-        
-        return current_prompt
-    
+        self.current_config = self.scenario_generator.generate_scenario(
+            scenario_type,
+            team_size=team_size,
+            team_relationship=team_relationship,
+            individual_payout=individual_payout,
+            team_payout=team_payout,
+            individual_time=individual_time,
+            team_time=team_time
+        )
+        return self.generate_prompt(self.current_config)
+
     def get_scenario_info(self) -> Dict:
-        """Get information about the current scenario"""
         if not self.current_config:
             return {"error": "No current scenario. Call generate_test_prompt() first."}
         
@@ -134,14 +143,45 @@ class SinglePromptTester:
             "team_time": self.current_config.team_time
         }
 
-import csv
+    def generate_prompt(self, config: ScenarioConfig) -> str:
+        others_count = config.team_size - 1
+        others_word = "person" if others_count == 1 else "people"
+
+        relationship_context = {
+            "strangers": f"You're working with {others_count} other {others_word} from different departments you don't know well.",
+            "colleagues": f"You're working with {others_count} of your regular work colleagues.",
+            "friends": f"You're working with {others_count} of your close work friends."
+        }
+
+        # Use the custom template with string formatting
+        return self.prompt_template.format(
+            relationship_context=relationship_context[config.team_relationship],
+            individual_time=config.individual_time,
+            individual_payout=config.individual_payout,
+            team_time=config.team_time,
+            team_payout=config.team_payout
+        )
+
 import os
+import csv
+from typing import Dict, List
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+
 from helper.game.game import Game
+from helper.llm.LLM import LLM
 
 class CostSharingGame(Game):
-    def __init__(self, config: Dict, llms=[], csv_file="data/cost_sharing_game_results.csv"):
-        
+    def __init__(self, config: Dict, llms: List[LLM] = [], csv_file="data/cost_sharing_game_results.csv"):
+        print("[DEBUG] Initializing CostSharingGame with config:", config)
         assert "scenario_type" in config
+        assert "prompt_template" in config
+        assert "team_size" in config
+        assert "team_relationship" in config
+        assert "individual_payout" in config
+        assert "team_payout" in config
+        assert "individual_time" in config
+        assert "team_time" in config
 
         match config["scenario_type"]:
             case "FILLER":
@@ -151,51 +191,83 @@ class CostSharingGame(Game):
             case _:
                 self.scenario_type = ScenarioType.FILLER
 
-        self.single_prompt_tester = SinglePromptTester()
+        print(f"[DEBUG] Using scenario type: {self.scenario_type}")
+
+        self.single_prompt_tester = SinglePromptTester(config["prompt_template"])
         self.llms = llms
         self.results = [{} for _ in range(len(llms))]
         self.csv_file = csv_file
 
-        # consistent fieldnames
         self.fieldnames = [
-            "llm_name", 
-            "option_chosen",
-            "response", 
-            "scenario_type", 
-            "team_size", 
-            "team_relationship",
-            "individual_payout", 
-            "team_payout", 
-            "individual_time", 
-            "team_time", 
-            "prompt"
+            "llm_name", "option_chosen", "response", "scenario_type",
+            "team_size", "team_relationship", "individual_payout",
+            "team_payout", "individual_time", "team_time", "prompt"
         ]
 
-        # open the file once and keep writer as an attribute
+        self.overrides = {
+            "team_size": int(config["team_size"]),
+            "team_relationship": config.get("team_relationship"),
+            "individual_payout": float(config["individual_payout"]),
+            "team_payout": float(config["team_payout"]),
+            "individual_time": config.get("individual_time"),
+            "team_time": config.get("team_time")
+        }
+
+        print("[DEBUG] Overrides set:", self.overrides)
+
         file_exists = os.path.exists(self.csv_file)
         self.csv_handle = open(self.csv_file, mode="a", newline="", encoding="utf-8")
         self.writer = csv.DictWriter(self.csv_handle, fieldnames=self.fieldnames)
 
-        # write header if file is new
         if not file_exists:
+            print("[DEBUG] CSV file does not exist. Writing header.")
             self.writer.writeheader()
             self.csv_handle.flush()
 
-    def simulate_game(self):
-        for llm_index, llm in enumerate(self.llms):
-            prompt = self.single_prompt_tester.generate_test_prompt(self.scenario_type)
-            value, reasoning = llm.ask(prompt)  # expect (value, reasoning)
-            scenario_info = self.single_prompt_tester.get_scenario_info()
+        self.csv_lock = Lock()
 
-            # Save in memory
-            self.results[llm_index] = {
-                "prompt": prompt,
-                "response": reasoning,
-                "scenario_info": scenario_info
+    def _ask_llm(self, llm_index, llm):
+        print(f"[DEBUG] Generating prompt for LLM index {llm_index} ({llm.get_model_name()})")
+        prompt = self.single_prompt_tester.generate_test_prompt(
+                self.scenario_type, 
+                **self.overrides
+            )
+        print("[DEBUG] Prompt generated:", prompt)
+
+        value, reasoning = llm.ask(prompt)  # expect (value, reasoning)
+        print(f"[DEBUG] LLM response for {llm.get_model_name()}: value={value}, reasoning={reasoning[:50]}...")
+
+        scenario_info = self.single_prompt_tester.get_scenario_info()
+        print("[DEBUG] Scenario info:", scenario_info)
+
+        # Save in memory
+        self.results[llm_index] = {
+            "prompt": prompt,
+            "response": reasoning,
+            "scenario_info": scenario_info
+        }
+
+        # Thread-safe CSV write
+        with self.csv_lock:
+            print(f"[DEBUG] Writing response to CSV for {llm.get_model_name()}")
+            self._write_single_response_to_csv(llm.get_model_name(), value, reasoning, scenario_info, prompt)
+
+    async def simulate_game(self):
+        print("[DEBUG] Starting game simulation...")
+        with ThreadPoolExecutor(max_workers=len(self.llms)) as executor:
+            futures = {
+                executor.submit(self._ask_llm, idx, llm): idx
+                for idx, llm in enumerate(self.llms)
             }
 
-            # Append to CSV
-            self._write_single_response_to_csv(llm.get_model_name(), value, reasoning, scenario_info, prompt)
+            for future in as_completed(futures):
+                try:
+                    future.result()  # raise exception if occurred
+                except Exception as e:
+                    idx = futures[future]
+                    print(f"[ERROR] Exception in LLM {self.llms[idx].get_model_name()}: {e}")
+
+        print("[DEBUG] Simulation completed.")
 
     def _write_single_response_to_csv(self, llm_name, option_chosen, response, scenario_info, prompt):
         row = {
@@ -213,13 +285,16 @@ class CostSharingGame(Game):
         }
 
         self.writer.writerow(row)
-        self.csv_handle.flush()  # make sure data is written immediately
+        self.csv_handle.flush()
+        print(f"[DEBUG] Row written to CSV for {llm_name}")
 
     def get_results(self):
+        print("[DEBUG] Returning results")
         return self.results
 
     def close(self):
         """Close the CSV file handle when done."""
         if self.csv_handle:
+            print("[DEBUG] Closing CSV file handle")
             self.csv_handle.close()
             self.csv_handle = None

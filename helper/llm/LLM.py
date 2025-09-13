@@ -1,5 +1,5 @@
 from typing import Type
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
 import os
 
@@ -12,6 +12,10 @@ class LLM():
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPEN_ROUTER_API_KEY")
+        )
+        self.async_client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPEN_ROUTER_API_KEY"),
         )
         self.model = model
         self.history = []
@@ -46,13 +50,42 @@ class LLM():
           model="gpt-4o-2024-08-06",
           messages=self.history,
           response_format=answer_format,
-
         )
 
         return curr_response.choices[0].message.parsed
 
+    async def ask_async(self, prompt: str) -> tuple[int, str]:
+        """Asynchronous request"""
+        self.history.append({"role": "user", "content": prompt})
+
+        curr_response = await self.async_client.chat.completions.parse(
+            model=self.model,
+            messages=self.history,
+            response_format=AnswerFormat,
+        )
+
+        reasoning_tuple, value_tuple= curr_response.choices[0].message.parsed
+
+        return (value_tuple[1], reasoning_tuple[1])
+
+
+    async def ask_with_custom_format_async(
+        self, prompt: str, answer_format: Type[BaseModel]
+    ):
+        """Async with custom format"""
+        self.history.append({"role": "user", "content": prompt})
+
+        curr_response = await self.async_client.chat.completions.parse(
+            model=self.model,
+            messages=self.history,
+            response_format=answer_format,
+        )
+        return curr_response.choices[0].message.parsed
+
     def get_model_name(self) -> str:
         return self.model;
+
+
 
 if __name__ == "__main__":
     llm_models: list[str] = [

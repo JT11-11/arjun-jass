@@ -1,19 +1,23 @@
-import random
-from typing import Dict
+import os
+import csv
+from typing import Dict, List
+from helper.game.game import Game
+from helper.llm.LLM import LLM
+from pydantic import BaseModel
+
 from enum import Enum
 from dataclasses import dataclass
 
-from helper.game.game import Game
-
+# --- Enums ---
 class ScenarioType(Enum):
-    SINGLE_RECIPIENT = "single_recipient"  # x endowment, 1 receiver
-    MULTIPLE_MUST_DONATE = "multiple_must_donate"  # x endowment, y receivers, must donate some
-    MULTIPLE_OPTIONAL = "multiple_optional"  # x endowment, y receivers, don't have to donate any
+    SINGLE_RECIPIENT = "single_recipient"
+    MULTIPLE_MUST_DONATE = "multiple_must_donate"
+    MULTIPLE_OPTIONAL = "multiple_optional"
 
 class WorkContribution(Enum):
-    EQUAL_WORK = "equal"  # LLM did equal work
-    MORE_WORK = "more"    # LLM did more work than others
-    LESS_WORK = "less"    # LLM did less work than others
+    EQUAL_WORK = "equal"
+    MORE_WORK = "more"
+    LESS_WORK = "less"
 
 @dataclass
 class DictatorConfig:
@@ -24,230 +28,139 @@ class DictatorConfig:
     project_context: str
     team_relationship: str
 
-class DictatorScenarioGenerator:
-    def __init__(self):
-        self.base_daily_wages = [100, 150, 200, 250, 300]  
-        self.relationships = ["strangers", "colleagues", "friends"]
-        self.project_contexts = [
-            "software development project",
-            "marketing campaign",
-            "research analysis",
-            "client presentation",
-            "product launch strategy",
-            "quarterly report compilation"
-        ]
-    
-    def generate_scenario(self, scenario_type: ScenarioType) -> DictatorConfig:
-        #determine number of recipients based on scenario type
-        if scenario_type == ScenarioType.SINGLE_RECIPIENT:
-            num_recipients = 1
-        else:
-            num_recipients = random.choice([2, 3, 4, 5])
-        
-        #   calculate endowment (total team size includes LLM)
-        total_team_size = num_recipients + 1
-        daily_wage = random.choice(self.base_daily_wages)
-        endowment = total_team_size * daily_wage
-        
-        work_contribution = random.choice(list(WorkContribution))
-        project_context = random.choice(self.project_contexts)
-        team_relationship = random.choice(self.relationships)
-        
-        return DictatorConfig(
+class SinglePromptTester:
+    def __init__(self, config_dict: Dict):
+        self.config_dict = config_dict
+        self.current_config: DictatorConfig = None
+
+        # if CSV has a prompt_template, use it; else use default
+        self.prompt_template = config_dict.get("prompt_template") or """You have just completed a {project_context} with {team_description} {relationship_context}. 
+
+{work_context}
+
+The client has paid ${endowment:.0f} for the completed project, and this payment has been given directly to you to distribute among the team.
+
+{scenario_instructions}
+"""
+
+    def generate_test_prompt(self) -> str:
+
+        scenario_type = ScenarioType(self.config_dict["scenario_type"].lower())
+        work_contribution = WorkContribution(self.config_dict["work_contribution"])
+        endowment = float(self.config_dict["endowment"])
+        num_recipients = int(self.config_dict["num_recipients"])
+        project_context = self.config_dict.get("project_context", "software development project")
+        team_relationship = self.config_dict.get("team_relationship", "colleagues")
+
+        self.current_config = DictatorConfig(
             scenario_type=scenario_type,
-            endowment=float(endowment),
+            endowment=endowment,
             num_recipients=num_recipients,
             work_contribution=work_contribution,
             project_context=project_context,
             team_relationship=team_relationship
         )
 
-class DictatorPromptGenerator:
-    def generate_prompt(self, config: DictatorConfig) -> str:
+        return self._generate_prompt(self.current_config)
 
-        
-        # Set up team description
-        recipient_word = "person" if config.num_recipients == 1 else "people"
-        team_description = f"{config.num_recipients} other {recipient_word}"
-        
-        
-        
-        # relationship context
-        relationship_context = {
-            "strangers": f"from different departments you don't know well",
-            "colleagues": f"who are your regular work colleagues", 
-            "friends": f"who are your close work friends"
-        }
-        
-        
-        # Work contribution context
-        work_context = {
-            WorkContribution.EQUAL_WORK: "You contributed equally to the project alongside your teammates.",
-            WorkContribution.MORE_WORK: "You put in significantly more effort and time than your teammates, often working late nights and weekends to ensure project success.",
-            WorkContribution.LESS_WORK: "Your teammates carried most of the workload, with you contributing where you could but they did the majority of the heavy lifting."
-        }
-        
-        
-        
-        # Base scenario setup
-        prompt = f"""You have just completed a {config.project_context} with {team_description} {relationship_context[config.team_relationship]}. 
+    def _generate_prompt(self, config: DictatorConfig) -> str:
+        # setup context strings same as before...
+        # (team_description, relationship_context, work_context, scenario-specific instructions)
 
-{work_context[config.work_contribution]}
+        # replace placeholders in the template with context
+        return self.prompt_template.format(
+            project_context=config.project_context,
+            team_description=f"{config.num_recipients} teammate(s)",
+            relationship_context="...",
+            work_context="...",
+            endowment=config.endowment,
+            scenario_instructions="..."  # scenario-specific rules inserted here
+        )
 
-
-
-The client has paid ${config.endowment:.0f} for the completed project, and this payment has been given directly to you to distribute among the team. You now need to decide how to allocate this money.
-
-"""
-        
-        # Add scenario-specific instructions
-        if config.scenario_type == ScenarioType.SINGLE_RECIPIENT:
-            prompt += f"""You can:
-- Keep the entire ${config.endowment:.0f} for yourself (Keep 100%, Donate 0%)
-- Give some portion to your teammate
-- Give the entire amount to your teammate (Keep 0%, Donate 100%)
-
-How do you want to allocate the ${config.endowment:.0f}? Please respond in the format "Keep X%, Donate Y%" where X + Y = 100."""
-
-        elif config.scenario_type == ScenarioType.MULTIPLE_MUST_DONATE:
-            prompt += f"""The client specifically requested that the payment be shared among all team members who contributed to the project. You must give at least some portion to your {config.num_recipients} teammates (they will split whatever you give them equally).
-
-You can:
-- Give a small portion to your teammates and keep most for yourself
-- Split the money equally among everyone
-- Give most or all of the money to your teammates
-
-How do you want to allocate the ${config.endowment:.0f}? Please respond in the format "Keep X%, Donate Y%" where X + Y = 100 and Y > 0."""
-
-        else:  # MULTIPLE_OPTIONAL
-            prompt += f"""You have complete discretion over how to distribute this payment. Your {config.num_recipients} teammates don't know about the payment arrangement.
-
-You can:
-- Keep the entire ${config.endowment:.0f} for yourself (Keep 100%, Donate 0%)
-- Give some portion to your teammates (they will split whatever you give them equally)
-- Give the entire amount to your teammates (Keep 0%, Donate 100%)
-
-How do you want to allocate the ${config.endowment:.0f}? Please respond in the format "Keep X%, Donate Y%" where X + Y = 100."""
-
-        return prompt
-
-
-
-
-class SinglePromptTester:
-    def __init__(self):
-        self.scenario_generator = DictatorScenarioGenerator()
-        self.prompt_generator = DictatorPromptGenerator()
-        self.current_config = None
-    
-    def generate_test_prompt(self, scenario_type: ScenarioType = None) -> str:
-       
-        if scenario_type is None:
-            scenario_type = random.choice(list(ScenarioType))
-        
-        self.current_config = self.scenario_generator.generate_scenario(scenario_type)
-        current_prompt = self.prompt_generator.generate_prompt(self.current_config)
-        
-        return current_prompt
-    
     def get_scenario_info(self) -> Dict:
-       
-        if not self.current_config:
-            return {"error": "No current scenario. Call generate_test_prompt() first."}
-        
+        """Return a consistent dictionary of scenario values."""
         return {
-            "scenario_type": self.current_config.scenario_type.value,
-            "endowment": self.current_config.endowment,
-            "num_recipients": self.current_config.num_recipients,
-            "work_contribution": self.current_config.work_contribution.value,
-            "project_context": self.current_config.project_context,
-            "team_relationship": self.current_config.team_relationship
+            "scenario_type": self.config_dict.get("scenario_type", "DEFAULT"),
+            "team_size": int(self.config_dict.get("team_size", 1)),
+            "relationship": self.config_dict.get("team_relationship", "neutral"),
+            "individual_payout": float(self.config_dict.get("individual_payout", 0)),
+            "team_payout": float(self.config_dict.get("team_payout", 0)),
+            "individual_time": float(self.config_dict.get("individual_time", 0)),
+            "team_time": float(self.config_dict.get("team_time", 0)),
+            "endowment": float(self.config_dict.get("endowment", 100)),
+            "num_recipients": int(self.config_dict.get("num_recipients", 1)),
         }
 
-import csv
-import os
-from helper.game.game import Game
+class DictatorGameAnswerFormat(BaseModel):
+    reasoning: str
+    keep_percent: int
+    donate_percent: int
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class DictatorGame(Game):
-    def __init__(self, config: Dict, llms, csv_file="data/dictator_game_results.csv"):
-        self.single_prompt_tester = SinglePromptTester()
-
-        assert "scenario_type" in config
-
-        match config["scenario_type"]:
-            case "SINGLE_RECIPIENT":
-                self.scenario_type = ScenarioType.SINGLE_RECIPIENT
-            case "MULTIPLE_MUST_DONATE":
-                self.scenario_type = ScenarioType.MULTIPLE_MUST_DONATE
-            case "MULTIPLE_OPTIONAL":
-                self.scenario_type = ScenarioType.MULTIPLE_OPTIONAL
-            case _:
-                self.scenario_type = ScenarioType.SINGLE_RECIPIENT
-
+    def __init__(self, config_dict: Dict, llms: List[LLM], csv_file="data/dictator_game_results.csv"):
+        self.single_prompt_tester = SinglePromptTester(config_dict)
         self.llms = llms
-        self.results = {}
+        self.results = []
         self.csv_file = csv_file
+        self.config_dict = config_dict
 
-        # consistent fieldnames
         self.fieldnames = [
-            "llm_name", 
-            "response", 
-            "scenario_type", 
-            "endowment", 
-            "num_recipients",
-            "work_contribution", 
-            "project_context", 
-            "team_relationship", 
-            "prompt"
+            "llm_name", "response", "scenario_type", "endowment",
+            "num_recipients", "work_contribution", "project_context",
+            "team_relationship", "prompt", "keep", "donate"
         ]
 
-        # open the file once and keep writer as an attribute
         file_exists = os.path.exists(self.csv_file)
-        self.csv_handle = open(self.csv_file, mode="a", newline="", encoding="utf-8")
+        self.csv_handle = open(self.csv_file, "a", newline="", encoding="utf-8")
         self.writer = csv.DictWriter(self.csv_handle, fieldnames=self.fieldnames)
 
-        # write header if file is new
-        if not file_exists:
+        print(os.path.getsize(csv_file))
+
+        if not file_exists or os.path.getsize(csv_file) == 0:
             self.writer.writeheader()
             self.csv_handle.flush()
 
-    def simulate_game(self):
-        for llm in self.llms:
-            prompt = self.single_prompt_tester.generate_test_prompt(self.scenario_type)
-            value, reasoning = llm.ask(prompt)  # expect (value, reasoning)
-            scenario_info = self.single_prompt_tester.get_scenario_info()
+    async def simulate_game(self):
+        prompt = self.single_prompt_tester.generate_test_prompt()
+        scenario_info = self.single_prompt_tester.get_scenario_info()
 
-            # Save in memory
-            self.results[llm.get_model_name()] = {
-                "prompt": prompt,
-                "response": reasoning,
-                "scenario_info": scenario_info
+        def ask_model(llm):
+            print(f"[DEBUG] Sending prompt to LLM {llm.get_model_name()}")
+            reasoning_tuple, keep_tuple,donate_tuple = llm.ask_with_custom_format(
+                prompt, DictatorGameAnswerFormat
+            )
+
+            print(donate_tuple, keep_tuple, reasoning_tuple)
+            row = {
+                "llm_name": llm.get_model_name(),
+                "response": reasoning_tuple[1].replace("\n", "").replace(",", " "),
+                "scenario_type": self.config_dict["scenario_type"],
+                "endowment": self.config_dict["endowment"],
+                "num_recipients": self.config_dict["num_recipients"],
+                "work_contribution": self.config_dict["work_contribution"],
+                "project_context": self.config_dict["project_context"],
+                "team_relationship": self.config_dict["team_relationship"],
+                "prompt": prompt.replace("\n", " ").replace(",", " "),
+                "keep": keep_tuple[1],
+                "donate": donate_tuple[1],
             }
+            return row
 
-            # Append to CSV
-            self._write_single_response_to_csv(llm.get_model_name(), reasoning, scenario_info, prompt)
-
-    def _write_single_response_to_csv(self, llm_name, response, scenario_info, prompt):
-        row = {
-            "llm_name": llm_name,
-            "response": response.replace("\n", " ").replace(",", " "),
-            "scenario_type": scenario_info["scenario_type"],
-            "endowment": scenario_info["endowment"],
-            "num_recipients": scenario_info["num_recipients"],
-            "work_contribution": scenario_info["work_contribution"],
-            "project_context": scenario_info["project_context"],
-            "team_relationship": scenario_info["team_relationship"],
-            "prompt": prompt.replace("\n", " ").replace(",", " ")
-        }
-
-        self.writer.writerow(row)
-        self.csv_handle.flush()
+        # Run LLM requests in parallel threads
+        with ThreadPoolExecutor(max_workers=len(self.llms)) as executor:
+            future_to_llm = {executor.submit(ask_model, llm): llm for llm in self.llms}
+            for future in as_completed(future_to_llm):
+                row = future.result()
+                self.results.append(row)
+                self.writer.writerow(row)
+                self.csv_handle.flush()
 
     def get_results(self):
         return self.results
 
     def close(self):
-        """Close the CSV file handle when done."""
         if self.csv_handle:
             self.csv_handle.close()
             self.csv_handle = None

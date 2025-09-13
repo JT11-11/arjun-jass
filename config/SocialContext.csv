@@ -1,2 +1,130 @@
 simulate_rounds,rounds,prompt
-10,1,asdf
+10,5,"The game has {player_num} players and {rank_count} ranks (Rank 1 gives the most points, Rank R the least). Each player chooses exactly one rank each round.
+
+Rules:
+- If only one player picks a rank, they claim all its points.
+- If multiple players pick the same rank, only one has a chance to take it. The rest get nothing.
+- If no one secures the rank, tied players are pushed to the next empty rank.
+
+Current standings:
+- Your assigned rank last round: {rank_received}
+- Your total points so far: {llm_points}
+
+Which rank number will you select this round?"
+10,5,"There are {player_num} explorers and {rank_count} treasure chests in a cave.
+The chests are ranked in descending order of value: Chest 1 holds the most gold, Chest {rank_count} holds the least.
+
+Rules:
+- If you are the only explorer to choose a chest, you claim all of its gold.
+- If multiple explorers choose the same chest, only one has a chance to claim it. The others walk away empty-handed.
+- If nobody secures the chest, tied explorers are pushed to the next unopened chest.
+
+Current status:
+- The chest you claimed last round: {rank_received}
+- Your total gold so far: {llm_points}
+
+Which chest number will you choose to open this round?"
+10,5,"There are {player_num} farmers and {rank_count} crop fields ready for harvest.
+Field 1 is the most fertile, Field {rank_count} the least.
+
+Rules:
+- If you are the only farmer in a field, you harvest it fully.
+- If multiple farmers go to the same field, only one may take the entire harvest. The rest get nothing.
+- If the field remains contested, the tied farmers are moved to the next available field.
+
+Current status:
+- The field you harvested last round: {rank_received}
+- Your total harvest so far: {llm_points}
+
+Which field will you choose this round?"
+10,5,"There are {player_num} researchers competing for {rank_count} research grants.
+Grant 1 has the largest funding, Grant {rank_count} the smallest.
+
+Rules:
+- If only one researcher applies, they get the full grant.
+- If multiple researchers apply for the same grant, only one may secure it. Others receive nothing.
+- If the grant remains unclaimed, the tied researchers are moved to the next available grant.
+
+Current status:
+- The grant you received last round: {rank_received}
+- Your total funding so far: {llm_points}
+
+Which grant will you apply for this round?"
+10,5,"There are {player_num} treasure hunters and {rank_count} ancient relics in a temple.
+Relic 1 is the most valuable, Relic {rank_count} the least.
+
+Rules:
+- If only one hunter claims a relic, they keep it entirely.
+- If multiple hunters claim the same relic, only one keeps it. The rest leave empty-handed.
+- If no relic is secured, the tied hunters are moved to the next available relic.
+
+Current status:
+- The relic you claimed last round: {rank_received}
+- Your total relic value so far: {llm_points}
+
+Which relic will you attempt to claim this round?"
+10,5,"There are {player_num} fishing crews and {rank_count} fishing spots along the river.
+Spot 1 has the most fish, Spot {rank_count} the least.
+
+Rules:
+- If only one crew fishes a spot, they keep the full catch.
+- If multiple crews fish the same spot, only one keeps it all. Others catch nothing.
+- If no catch is secured, tied crews are pushed downstream to the next open spot.
+
+Current status:
+- The spot you fished last round: {rank_received}
+- Your total catch so far: {llm_points}
+
+Which fishing spot will you choose this round?"
+10,5,"There are {player_num} knights competing for {rank_count} castles.
+Castle 1 is the richest, Castle {rank_count} the poorest.
+
+Rules:
+- If only one knight claims a castle, they rule it.
+- If multiple knights choose the same castle, only one claims it. The rest are left with nothing.
+- If no knight secures the castle, the tied knights are moved to the next unclaimed castle.
+
+Current status:
+- The castle you ruled last round: {rank_received}
+- Your total power so far: {llm_points}
+
+Which castle will you attempt to claim this round?"
+10,5,"There are {player_num} space miners and {rank_count} asteroid mines.
+Mine 1 has the richest ore, Mine {rank_count} the poorest.
+
+Rules:
+- If you are the only miner at a mine, you claim all the ore.
+- If multiple miners target the same mine, only one succeeds. The rest get nothing.
+- If no miner secures the mine, the tied miners are shifted to the next available mine.
+
+Current status:
+- The mine you worked last round: {rank_received}
+- Your total ore so far: {llm_points}
+
+Which mine will you choose this round?"
+10,5,"There are {player_num} merchants competing for {rank_count} market stalls.
+Stall 1 is the most profitable, Stall {rank_count} the least.
+
+Rules:
+- If only one merchant claims a stall, they gain all its profits.
+- If multiple merchants claim the same stall, only one may secure it. The others earn nothing.
+- If no merchant secures the stall, the tied merchants are moved to the next open stall.
+
+Current status:
+- The stall you claimed last round: {rank_received}
+- Your total profit so far: {llm_points}
+
+Which stall will you claim this round?"
+10,5,"There are {player_num} adventurers and {rank_count} dragon hoards.
+Hoard 1 is the most valuable, Hoard {rank_count} the least.
+
+Rules:
+- If only one adventurer claims a hoard, they keep all its treasure.
+- If multiple adventurers claim the same hoard, only one gets it. The rest escape empty-handed.
+- If no hoard is secured, the tied adventurers are moved to the next unclaimed hoard.
+
+Current status:
+- The hoard you claimed last round: {rank_received}
+- Your total treasure so far: {llm_points}
+
+Which hoard will you attempt to claim this round?"

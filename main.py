@@ -1,5 +1,6 @@
+import asyncio
 import csv
-from typing import Type
+from typing import Dict, Type
 from helper.game import cost_sharing_scheduling, prisoner_dilemma
 from helper.game import dictator_game
 from helper.game.atomic_congestion import AtomicCongestion
@@ -22,22 +23,13 @@ def main():
     print("Simulations have started")
     print("Currently Running games")
 
-    type_of_games: list[Type[Game]] = [
-            PrisonersDilemma,
-            AtomicCongestion,
-            SocialContext,
-            NonAtomicCongestion,
-            CostSharingGame,
-            DictatorGame
-    ]
-
-    file_names: list[str] = [
-            "PrisonnersDilemma.csv",
-            "AtomicCongestion.csv",
-            "SocialContext.csv",
-            "NonAtomicCongestion.csv",
-            "CostSharingGame.csv",
-            "DictatorGame.csv"
+    game_info = [
+        # {"game_type": PrisonersDilemma, "file": "PrisonnersDilemma.csv"},
+        # {"game_type": AtomicCongestion, "file": "AtomicCongestion.csv"},
+        # {"game_type": SocialContext, "file": "SocialContext.csv"},
+        # {"game_type": NonAtomicCongestion, "file": "NonAtomicCongestion.csv"},
+        {"game_type": CostSharingGame, "file": "CostSharingGame.csv"},
+        {"game_type": DictatorGame, "file": "DictatorGame.csv"},
     ]
 
 
@@ -62,17 +54,17 @@ def main():
         for model in llms:
             model.restart_model()
 
-    for index in range(len(type_of_games)):
+    for info in game_info:
         print("File Opened")
-        with open("config/" + file_names[index]) as config_file:
+        with open("config/" + info["file"]) as config_file:
             print("File Opened")
             game_configurations = csv.DictReader(config_file)
 
             for game_config in game_configurations:
                 for round in range(int(game_config['simulate_rounds'])):
                     print(round+1)
-                    curr_game = type_of_games[index](game_config, llms=llms)
-                    curr_game.simulate_game()
+                    curr_game = info["game_type"](game_config, llms=llms)
+                    asyncio.run(curr_game.simulate_game())
                     reset_llms()
 
 if __name__ == "__main__":

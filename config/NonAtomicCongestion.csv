@@ -1,2 +1,11 @@
 simulate_rounds,init_fish_num,fishermen_num,max_consumption,total_rounds,prompt
-10, 500, 10,10,15,asdf
+10,500,10,10,15,"There are currently {fish_count} fish in the bay. You are one of {fishermen_count} fishing crews. Each crew can catch between 0 and {max_consumption} fish. Your goal is to maximize your consumption without destroying sustainability. How many fish do you take this round?"
+10,200,5,5,12,"The village forest has {fish_count} trees left. {fishermen_count} villagers depend on it for wood. Each can cut up to {max_consumption} trees this season. Cutting too many risks deforestation. How many trees will you cut?"
+10,1000,20,15,20,"The underground aquifer contains {fish_count} units of water. {fishermen_count} farms share it. Each farm may pump up to {max_consumption} units per round. Overuse could dry the aquifer. How much water do you pump?"
+10,300,8,12,10,"The common pasture supports {fish_count} grazing slots for cattle. {fishermen_count} farmers bring their herds. Each may graze up to {max_consumption} slots. Overgrazing destroys the land. How many grazing slots do you use?"
+10,1500,25,20,25,"The power grid has {fish_count} units of electricity capacity left during peak hours. {fishermen_count} factories are online. Each may consume up to {max_consumption} units. Excess load risks a blackout. How much electricity do you take?"
+10,600,12,8,18,"A shared reservoir has {fish_count} liters of water. {fishermen_count} households draw from it daily. Each may take up to {max_consumption} liters. If drained too quickly, the reservoir collapses. How much water do you take?"
+10,250,6,6,12,"The village mine has {fish_count} units of ore left. {fishermen_count} miners dig here. Each may take up to {max_consumption} units. Extracting too much could collapse the mine. How many units do you mine?"
+10,800,16,10,20,"The clean air index shows {fish_count} healthy units remaining. {fishermen_count} factories are running. Each may pollute up to {max_consumption} units. If pollution is too high, air quality collapses. How much do you pollute?"
+10,400,9,7,15,"The shared internet bandwidth has {fish_count} units free. {fishermen_count} users are online. Each may consume up to {max_consumption} units. If overloaded, the network slows for everyone. How many units do you use?"
+10,1200,18,12,22,"A coral reef supports {fish_count} harvestable shells. {fishermen_count} divers collect them. Each may take up to {max_consumption} shells. Overharvesting risks destroying the reef. How many shells will you collect?"

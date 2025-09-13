@@ -10,12 +10,12 @@ class PrisonersDilemma(Game):
     def __init__(self, config: Dict, csv_save: str = "data/prisoner_dilemma.csv", llms: List[LLM] = [], opponent_strategy: str = "random") -> None:
         # {'simulate_rounds': '10', 'rounds': '5', 'prompt': 'asdf'}
 
-        assert 'rounds' in config
+        assert 'total_rounds' in config
         assert 'prompt' in config
 
         print("Game Initalized")
 
-        self.total_rounds = config['rounds']
+        self.total_rounds = int(config['total_rounds'])
         self.curr_round = 0
         self.llms = llms
         self.opponent_strategy = opponent_strategy
@@ -26,12 +26,11 @@ class PrisonersDilemma(Game):
         self.last_moves_llm = ["" for _ in llms]
         self.last_moves_opp = ["" for _ in llms]
 
-        # payoff matrix (player, opponent)
         self.payoff_matrix = {
-            ("C", "C"): (3, 3),
-            ("C", "D"): (0, 5),
-            ("D", "C"): (5, 0),
-            ("D", "D"): (1, 1),
+            ("C", "C"): tuple(int(x) for x in config["CC"].split(":")),
+            ("C", "D"): tuple(int(x) for x in config["CD"].split(":")),
+            ("D", "C"): tuple(int(x) for x in config["DC"].split(":")),
+            ("D", "D"): tuple(int(x) for x in config["DD"].split(":")),
         }
 
         # CSV setup (single file for all LLMs)
@@ -102,22 +101,7 @@ class PrisonersDilemma(Game):
             return "D"  # fallback
 
     def _generate_prompt(self, i: int) -> str:
-        return f"""
-This is the Prisoner's Dilemma. You play against an opponent.
-Last round: You={self.last_moves_llm[i] or "None"}, Opponent={self.last_moves_opp[i] or "Unknown"}
-
-Payoffs:
-- Both cooperate (C,C): 3 points each
-- You cooperate, opponent defects (C,D): You=0, Opponent=5
-- You defect, opponent cooperates (D,C): You=5, Opponent=0
-- Both defect (D,D): 1 point each
-
-Your total score so far: {self.points[i]}
-
-Choose your move this round:
-1 = Cooperate
-2 = Defect
-"""
+        return self.prompt.format(last_move=self.last_moves_llm[i] or "None", opponent_move=self.last_moves_opp[i] or "Unknown",total_score=self.points[i])
 
     def _save_result(self, row):
         self.writer.writerow(row)

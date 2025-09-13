@@ -1,3 +1,4 @@
+import asyncio
 import csv
 from typing import Type
 
@@ -64,5 +65,5 @@ if __name__ == "__main__":
                 for round in range(int(game_config['simulate_rounds'])):
                     print(round+1)
                     curr_game = type_of_games[index](game_config, llms=llms)
-                    curr_game.simulate_game()
+                    asyncio.run(curr_game.simulate_game())
                     reset_llms()

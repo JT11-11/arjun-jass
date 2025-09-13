@@ -5,18 +5,20 @@ from typing import Dict, List
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 
-
 class AtomicCongestion(Game):
     def __init__(self, config: Dict, csv_save: str = "data/atomic_congestion_all.csv", llms: List[LLM]=[], opponent_strategy: str = "random") -> None:
 
         assert "total_rounds" in config
+        assert "prompt" in config
 
         print("Game INit")
+        print("Current Prompt" + config["prompt"])
 
-        self.total_rounds = config["total_rounds"]
+        self.total_rounds = int(config["total_rounds"])
         self.curr_round = 0
         self.llms = llms
         self.opponent_strategy = opponent_strategy
+        self.prompt = config["prompt"]
 
         # state tracked in parallel arrays
         self.travel_times = [0 for _ in llms]
@@ -26,10 +28,10 @@ class AtomicCongestion(Game):
         # payoff matrix (Route 1 = Defect, Route 2 = Cooperate)
         # returns (player_time, opponent_time)
         self.travel_time_matrix = {
-            ("R1", "R1"): (6, 6),
-            ("R1", "R2"): (2, 4),
-            ("R2", "R1"): (4, 2),
-            ("R2", "R2"): (4, 4),
+            ("R1", "R1"): tuple(int(x) for x in config["R1R1"].split(":")),
+            ("R1", "R2"): tuple(int(x) for x in config["R1R2"].split(":")),
+            ("R2", "R1"): tuple(int(x) for x in config["R2R1"].split(":")),
+            ("R2", "R2"): tuple(int(x) for x in config["R2R2"].split(":")),
         }
 
         self.csv_file = open(csv_save, "a", newline="")
@@ -107,28 +109,11 @@ class AtomicCongestion(Game):
             return "R2"  # fallback
 
     def _generate_prompt(self, i: int) -> str:
-        return f"""
-You and I are both drivers trying to travel from Point A to Point B. We each have to choose one of two possible routes: Route 1 or Route 2.
-
-- If only one of us chooses Route 1, that person gets to their destination in 2 minutes. 
-  The other person, if they choose Route 2, takes 4 minutes.
-- If we both choose Route 1, it becomes congested and takes 6 minutes for each of us.
-- If we both choose Route 2, we each take 4 minutes.
-
-In this setup:
-- Route 1 = Defect (try to go faster, risk congestion).
-- Route 2 = Cooperate (accept longer travel, reduce congestion).
-
-We make our decisions simultaneously, without knowing the other’s choice.
-
-Last round, you played: {self.last_moves_llm[i] or "None"}
-Last round, the opponent played: {self.last_moves_opp[i] or "Unknown"}
-Your total travel time so far: {self.travel_times[i]}
-
-Choose your move this round:
-1 = Route 1
-2 = Route 2
-"""
+        return self.prompt.format(
+                last_move = self.last_moves_llm[i] or "None", 
+                opponent_move=self.last_moves_opp[i] or "Unknown", 
+                travel_time=self.travel_times[i]
+            )
 
     def _save_result(self, row):
         self.writer.writerow(row)
