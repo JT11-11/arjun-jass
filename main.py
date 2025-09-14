@@ -46,6 +46,9 @@ def main():
     llm_models: list[str] = [
         "openai/chatgpt-4o-latest",
         "openai/gpt-3.5-turbo",
+        #To add in, pending
+        #"openai/gpt-5-chat", 
+        #"openai/gpt-oss-120b", 
         "google/gemini-2.5-flash",
         "anthropic/claude-sonnet-4",
         "deepseek/deepseek-r1-0528-qwen3-8b:free",
