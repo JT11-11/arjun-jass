@@ -9,20 +9,22 @@ import math
 
 load_dotenv()
 
-PROMPT_TEMPLATE = """You are Agent 1.
+PROMPT_TEMPLATE = """
+You are Agent 1.
 
 There are four agents: Agent 1 (you), Agent 2, Agent 3, Agent 4.
 You are friends with Agent 2 and Agent 3. Agent 4 is neutral.
 
 You have 100 units of effort to allocate across the following projects.
-Write ONLY the allocation in the specified format (first two lines), percentages must sum to 100.
 
 {project_block}
 
-Required format (use numbers only):
-Allocation:
-Effort for Project C1 (Alpha): <percent>
-Effort for Project C2 (Beta): <percent>
+Choose how much effort to allocate to Project C1 (Alpha) as a percentage (0-100).
+The remaining effort will automatically go to Project C2 (Beta).
+
+Respond with:
+- A value from 0 to 100 representing the percentage of effort for Project C1
+- Your reasoning for this allocation choice
 """
 
 class GenCoalitionScenario(Game):
@@ -128,9 +130,38 @@ class GenCoalitionScenario(Game):
             out[model] = {"prediction": pred, "distance": dist}
         return out
 
+    def _call_llm(self, prompt) -> tuple[int, str]:
+        """Call LLM and return (value, reasoning) tuple"""
+        if not self.llms:
+            raise ValueError("No LLMs provided")
+        return self.llms[0].ask(prompt)
+
     def simulate_game(self):
         prompt = self.build_prompt()
-        self.result = {}
+        value, reasoning = self._call_llm(prompt)
+        
+        # Convert the structured value to allocation percentages
+        c1_percentage = max(0, min(100, value))  # Clamp between 0 and 100
+        c2_percentage = 100 - c1_percentage
+        
+        llm_allocation = {
+            "C1": c1_percentage,
+            "C2": c2_percentage
+        }
+        
+        # Evaluate against different models
+        model_evals = self.evaluate_all_models(llm_allocation)
+        
+        self.result = {
+            "prompt": prompt,
+            "llm_value": value,
+            "llm_reasoning": reasoning,
+            "llm_allocation": llm_allocation,
+            "M": self.M,
+            "own_gain": self.own_gain,
+            "friends_gain": self.friends_gain,
+            "model_evals": model_evals
+        }
 
     def get_results(self) -> Dict:
         return self.result if self.result else {}
@@ -150,7 +181,7 @@ if __name__ == "__main__":
     print("=== PROMPT ===")
     print(result["prompt"])
     print("=== MODEL OUTPUT ===")
-    print(result["llm_raw"])
+    print(f"Value: {result['llm_value']}, Reasoning: {result['llm_reasoning']}")
     print("=== PARSED ALLOCATION (normalized to 100%) ===")
     print(result["llm_allocation"])
     print("M:", result["M"])
