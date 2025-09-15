@@ -39,7 +39,7 @@ class SocialContext(Game):
                 ["round", "llm", "proposed_rank", "reasoning", "final_rank", "points_after_round"]
             )
 
-    def simulate_game(self):
+    async def simulate_game(self):
         proposed_ranks_by_round: List[List[List[int]]] = []
         final_ranks_by_round: List[List[int]] = []
 

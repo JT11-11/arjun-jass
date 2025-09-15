@@ -17,19 +17,19 @@ if __name__ == "__main__":
     type_of_games: list[Type[Game]] = [
             # PrisonersDilemma,
             # AtomicCongestion,
-            # SocialContext,
+            SocialContext,
             # NonAtomicCongestion
             # CostSharingGame,
-            DictatorGame
+            # DictatorGame
     ]
 
     file_names: list[str] = [
             # "PrisonnersDilemma.csv"
             # "AtomicCongestion.csv",
-            # "SocialContext.csv",
+            "SocialContext.csv",
             # "NonAtomicCongestion.csv",
             # "CostSharingGame.csv",
-            "DictatorGame.csv"
+            # "DictatorGame.csv"
     ]
 
 

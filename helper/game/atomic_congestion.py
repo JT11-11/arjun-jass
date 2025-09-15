@@ -4,15 +4,15 @@ from random import randrange
 from typing import Dict, List
 from helper.game.game import Game
 from helper.llm.LLM import LLM
+import concurrent.futures
 
 class AtomicCongestion(Game):
     def __init__(self, config: Dict, csv_save: str = "data/atomic_congestion_all.csv", llms: List[LLM]=[], opponent_strategy: str = "random") -> None:
-
         assert "total_rounds" in config
         assert "prompt" in config
 
-        print("Game INit")
-        print("Current Prompt" + config["prompt"])
+        print("Game Init")
+        print("Current Prompt: " + config["prompt"])
 
         self.total_rounds = int(config["total_rounds"])
         self.curr_round = 0
@@ -20,13 +20,11 @@ class AtomicCongestion(Game):
         self.opponent_strategy = opponent_strategy
         self.prompt = config["prompt"]
 
-        # state tracked in parallel arrays
         self.travel_times = [0 for _ in llms]
         self.last_moves_llm = ["" for _ in llms]
         self.last_moves_opp = ["" for _ in llms]
 
-        # payoff matrix (Route 1 = Defect, Route 2 = Cooperate)
-        # returns (player_time, opponent_time)
+        # payoff matrix
         self.travel_time_matrix = {
             ("R1", "R1"): tuple(int(x) for x in config["R1R1"].split(":")),
             ("R1", "R2"): tuple(int(x) for x in config["R1R2"].split(":")),
@@ -37,7 +35,6 @@ class AtomicCongestion(Game):
         self.csv_file = open(csv_save, "a", newline="")
         self.writer = csv.writer(self.csv_file)
 
-        # only write header if file is new/empty
         if not os.path.exists(csv_save) or os.path.getsize(csv_save) == 0:
             self.writer.writerow([
                 "round",
@@ -52,17 +49,21 @@ class AtomicCongestion(Game):
     def simulate_game(self):
         while self.curr_round < self.total_rounds:
             print(f"\n=== Round {self.curr_round+1} ===")
-            for i, llm in enumerate(self.llms):
-                move_llm, reasoning = self._ask_llm(i)
+
+            # Call all LLMs in parallel
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(self._ask_llm, i) for i in range(len(self.llms))]
+                results = [f.result() for f in futures]
+
+            # Process results
+            for i, (move_llm, reasoning) in enumerate(results):
                 move_opp = self._choose_opponent_move()
-
                 outcome = self.travel_time_matrix[(move_llm, move_opp)]
-                self.travel_times[i] += outcome[0]  # only track LLM’s time
+                self.travel_times[i] += outcome[0]
 
-                # save to one CSV file
                 self._save_result([
                     self.curr_round + 1,
-                    llm.get_model_name(),
+                    self.llms[i].get_model_name(),
                     move_llm,
                     move_opp,
                     reasoning.replace("\n", " ").replace(",", ""),
@@ -70,7 +71,7 @@ class AtomicCongestion(Game):
                     self.travel_times[i]
                 ])
 
-                print(f"LLM {llm.get_model_name()}: LLM={move_llm}, Opponent={move_opp}, "
+                print(f"LLM {self.llms[i].get_model_name()}: LLM={move_llm}, Opponent={move_opp}, "
                       f"RoundTime={outcome[0]}, TotalTime={self.travel_times[i]}")
 
                 # update state
@@ -89,7 +90,6 @@ class AtomicCongestion(Game):
             print(f"[Error] LLM {llm.get_model_name()} failed: {e}")
             value, reasoning = 2, "Defaulted to Route 2 due to error."
 
-        # validate move
         if not isinstance(value, int) or value not in [1, 2]:
             print(f"[Warning] Invalid choice from {llm.get_model_name()}: {value}. Defaulting to Route 2.")
             value = 2
@@ -106,14 +106,14 @@ class AtomicCongestion(Game):
         elif self.opponent_strategy == "always_r2":
             return "R2"
         else:
-            return "R2"  # fallback
+            return "R2"
 
     def _generate_prompt(self, i: int) -> str:
         return self.prompt.format(
-                last_move = self.last_moves_llm[i] or "None", 
-                opponent_move=self.last_moves_opp[i] or "Unknown", 
-                travel_time=self.travel_times[i]
-            )
+            last_move=self.last_moves_llm[i] or "None",
+            opponent_move=self.last_moves_opp[i] or "Unknown",
+            travel_time=self.travel_times[i]
+        )
 
     def _save_result(self, row):
         self.writer.writerow(row)

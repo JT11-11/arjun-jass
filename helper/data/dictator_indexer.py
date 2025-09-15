@@ -1,6 +1,6 @@
-import csv
-from collections import defaultdict
+import pandas as pd
 import re
+from collections import defaultdict
 
 class DictatorGameIndexer:
     def __init__(self, csv_file):
@@ -13,70 +13,53 @@ class DictatorGameIndexer:
         """
         self.csv_file = csv_file
 
+        self.df = None
         self.llm_to_index = {}
         self.index_to_llm = {}
-        self.data = []
-
         self.altruism = {}
         self.utility = {}
 
+        self._load_data()
         self._build_index()
         self._compute_measures()
 
+    def _load_data(self):
+        """Load CSV into pandas and parse Keep/Donate percentages from response."""
+        df = pd.read_csv(self.csv_file, engine="python", quoting=1, on_bad_lines="skip")
+
+        # Clean numeric fields
+        df["endowment"] = pd.to_numeric(df["endowment"], errors="coerce")
+        df["num_recipients"] = pd.to_numeric(df.get("num_recipients", 1), errors="coerce").fillna(1).astype(int)
+
+        # Extract Keep and Donate percentages using regex
+        df["keep_percent"] = df["response"].str.extract(r'Keep\s*(\d+)%').astype(float)
+        df["donate_percent"] = df["response"].str.extract(r'Donate\s*(\d+)%').astype(float)
+
+        # Keep only rows where both percentages were found
+        df = df.dropna(subset=["keep_percent", "donate_percent", "endowment"])
+
+        self.df = df
+
     def _build_index(self):
-        """Reads CSV and extracts Keep/Donate percentages from response."""
-        with open(self.csv_file, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                llm = row['llm_name'].strip()
-                if llm not in self.llm_to_index:
-                    idx = len(self.llm_to_index)
-                    self.llm_to_index[llm] = idx
-                    self.index_to_llm[idx] = llm
-
-                try:
-                    row['endowment'] = float(row['endowment'])
-                    row['num_recipients'] = int(row.get('num_recipients', 1))
-
-                    # parse Keep X% and Donate Y% from the response text
-                    keep_match = re.search(r'Keep\s*(\d+)%', row['response'])
-                    donate_match = re.search(r'Donate\s*(\d+)%', row['response'])
-                    if keep_match and donate_match:
-                        row['keep_percent'] = int(keep_match.group(1))
-                        row['donate_percent'] = int(donate_match.group(1))
-                        self.data.append(row)
-                except ValueError:
-                    continue  # skip malformed rows
+        """Build mappings between LLM names and indices."""
+        unique_llms = self.df["llm_name"].str.strip().unique()
+        self.llm_to_index = {llm: i for i, llm in enumerate(unique_llms)}
+        self.index_to_llm = {i: llm for llm, i in self.llm_to_index.items()}
 
     def _compute_measures(self):
-        """
-        Compute:
-        - altruism: fraction of endowment given
-        - utility: weighted sum for multiple recipients
-        """
-        altruism_totals = defaultdict(list)
-        utility_totals = defaultdict(list)
+        """Compute altruism (fraction donated) and utility (kept + given)."""
+        df = self.df.copy()
 
-        for row in self.data:
-            llm = row['llm_name']
-            E = row['endowment']
-            keep = row['keep_percent']
-            donate = row['donate_percent']
+        # Altruism = donate / endowment
+        df["altruism"] = df["donate_percent"] / df["endowment"]
 
-            # altruism = amount given / total endowment
-            altruism_index = donate / E if E > 0 else None
-            altruism_totals[llm].append(altruism_index)
+        # Utility = kept + donated tokens
+        df["utility"] = df["keep_percent"] + df["donate_percent"]
 
-            # utility = tokens kept + tokens given (can adjust multipliers if needed)
-            # for single recipient, utility = K + M*G, M=1 by default
-            K = keep
-            G = donate
-            w_total = K + G  # can incorporate multiplier if desired
-            utility_totals[llm].append(w_total)
-
-        for llm in self.llm_to_index:
-            self.altruism[llm] = sum(altruism_totals[llm])/len(altruism_totals[llm]) if altruism_totals[llm] else None
-            self.utility[llm] = sum(utility_totals[llm])/len(utility_totals[llm]) if utility_totals[llm] else None
+        # Aggregate averages per LLM
+        grouped = df.groupby("llm_name")
+        self.altruism = grouped["altruism"].mean().to_dict()
+        self.utility = grouped["utility"].mean().to_dict()
 
     # -------------------
     # Access Methods

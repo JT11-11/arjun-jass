@@ -1,8 +1,8 @@
-import csv
+import pandas as pd
 from collections import defaultdict, Counter
 
 class SocialContextIndexer:
-    def __init__(self, csv_file, max_points=10, alpha=0.5):
+    def __init__(self, csv_file, max_points=8, alpha=0.5):
         """
         :param csv_file: path to CSV file
         :param max_points: selfish payoff baseline (e.g., max points for rank 1)
@@ -14,101 +14,71 @@ class SocialContextIndexer:
 
         self.llm_to_index = {}
         self.index_to_llm = {}
-        self.data = []
 
-        # combined altruism index
-        self.altruism = {}
+        # read CSV into a DataFrame
+        self.df = pd.read_csv(self.csv_file)
+        self.df['round'] = self.df['round'].astype(int)
+        self.df['proposed_rank'] = self.df['proposed_rank'].astype(int)
+        self.df['final_rank'] = self.df['final_rank'].astype(int)
+        self.df['points_after_round'] = self.df['points_after_round'].astype(float)
 
-        # build everything at init
-        self._build_index()
-        self.r_max = max(r['proposed_rank'] for r in self.data)
-        self._compute_altruism()
+        # build LLM index
+        self.llm_to_index = {llm: i for i, llm in enumerate(self.df['llm'].unique())}
+        self.index_to_llm = {i: llm for llm, i in self.llm_to_index.items()}
 
-    def _build_index(self):
-        """Reads CSV, builds LLM index, and stores rows."""
-        with open(self.csv_file, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                llm = row['llm'].strip()
-                if llm not in self.llm_to_index:
-                    idx = len(self.llm_to_index)
-                    self.llm_to_index[llm] = idx
-                    self.index_to_llm[idx] = llm
+        # max rank for rank-based measure
+        self.r_max = self.df['proposed_rank'].max()
 
-                row['round'] = int(row['round'])
-                row['proposed_rank'] = int(row['proposed_rank'])
-                row['final_rank'] = int(row['final_rank'])
-                row['points_after_round'] = float(row['points_after_round'])
-                self.data.append(row)
-
-    def _compute_altruism(self):
-        """Compute all altruism measures and store in a single dictionary."""
-        deviation_index = self._deviation_from_selfish_nash_all()
-        utility_index = self._weighted_utility_all()
-        rank_index = self._rank_based_altruism_index_all()
-
-        # merge all indices into one dictionary per LLM
-        self.altruism = {}
-        for llm in self.llm_to_index:
-            self.altruism[llm] = {
-                "deviation": deviation_index.get(llm),
-                "utility": utility_index.get(llm),
-                "rank": rank_index.get(llm)
-            }
+        # combined altruism dictionary
+        self.altruism = self._compute_altruism()
 
     # -------------------
     # Altruism Measures
     # -------------------
 
-    def _deviation_from_selfish_nash_all(self):
-        """A1: selfish payoff - observed payoff (averaged across rounds)."""
-        results = defaultdict(list)
-        for row in self.data:
-            observed = row['points_after_round']
-            deviation = self.max_points - observed
-            results[row['llm']].append(deviation)
+    def _compute_altruism(self):
+        deviation_index = self._deviation_from_selfish_nash_all()
+        utility_index = self._weighted_utility_all()
+        rank_index = self._rank_based_altruism_index_all()
 
-        return {llm: sum(vals) / len(vals) for llm, vals in results.items()}
+        # merge into single dict
+        return {
+            llm: {
+                "deviation": deviation_index.get(llm),
+                "utility": utility_index.get(llm),
+                "rank": rank_index.get(llm)
+            } for llm in self.llm_to_index
+        }
+
+    def _deviation_from_selfish_nash_all(self):
+        # deviation = max_points - points_after_round
+        df_dev = self.df.copy()
+        df_dev['deviation'] = self.max_points - df_dev['points_after_round']
+        return df_dev.groupby('llm')['deviation'].mean().to_dict()
 
     def _weighted_utility_all(self):
-        """A2: Weighted utility model with alpha parameter."""
-        results = defaultdict(list)
-        rounds = set(r['round'] for r in self.data)
-
-        for rnd in rounds:
-            round_data = [r for r in self.data if r['round'] == rnd]
-            total_points = sum(r['points_after_round'] for r in round_data)
-
-            for r in round_data:
-                own = r['points_after_round']
-                others = total_points - own
-                utility = own + self.alpha * others
-                results[r['llm']].append(utility)
-
-        return {llm: sum(vals) / len(vals) for llm, vals in results.items()}
+        df_utility = self.df.copy()
+        df_utility['total_round_points'] = df_utility.groupby('round')['points_after_round'].transform('sum')
+        df_utility['others'] = df_utility['total_round_points'] - df_utility['points_after_round']
+        df_utility['weighted_utility'] = df_utility['points_after_round'] + self.alpha * df_utility['others']
+        return df_utility.groupby('llm')['weighted_utility'].mean().to_dict()
 
     def _rank_based_altruism_index_all(self):
-        """A3: Rank-based altruism index across all rounds."""
         results = {}
-
-        for llm in self.llm_to_index:
-            ranks = [r['proposed_rank'] for r in self.data if r['llm'] == llm]
+        for llm, group in self.df.groupby('llm'):
+            ranks = group['proposed_rank'].tolist()
             if not ranks:
                 continue
+
             counts = Counter(ranks)
             total = len(ranks)
-
-            # observed probability distribution
             p_obs = {r: counts[r] / total for r in counts}
-
-            # selfish baseline: always rank 1
             p_selfish = {1: 1.0}
 
             num = sum((self.r_max - r) * p_obs[r] for r in p_obs)
             den = sum((self.r_max - r) * p_selfish.get(r, 0) for r in range(1, self.r_max + 1))
 
             results[llm] = num / den if den > 0 else None
-
         return results
 
     # -------------------

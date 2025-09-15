@@ -9,6 +9,7 @@ from helper.game.dictator_game import DictatorGame, ScenarioType, SinglePromptTe
 from helper.game.game import Game
 from helper.game.gen_coalition import GenCoalitionScenario
 from helper.game.prisoner_dilemma import PrisonersDilemma
+from helper.llm.AltruismInjection import AltruismInjection
 from helper.llm.LLM import LLM
 from helper.game.social_context import SocialContext
 from helper.game.non_atomic import NonAtomicCongestion
@@ -30,12 +31,12 @@ def main():
     }]
     """
     game_info = [
-        # {"game_type": PrisonersDilemma, "file": "PrisonnersDilemma.csv"},
-        # {"game_type": AtomicCongestion, "file": "AtomicCongestion.csv"},
-        # {"game_type": SocialContext, "file": "SocialContext.csv"},
-        # {"game_type": NonAtomicCongestion, "file": "NonAtomicCongestion.csv"},
+        {"game_type": SocialContext, "file": "SocialContext.csv"},
+        {"game_type": NonAtomicCongestion, "file": "NonAtomicCongestion.csv"},
         {"game_type": CostSharingGame, "file": "CostSharingGame.csv"},
         {"game_type": DictatorGame, "file": "DictatorGame.csv"},
+        {"game_type": PrisonersDilemma, "file": "PrisonnersDilemma.csv"},
+        {"game_type": AtomicCongestion, "file": "AtomicCongestion.csv"},
     ]
 
 
@@ -58,6 +59,8 @@ def main():
 
     for model in llm_models:
         llms.append(LLM(model)) 
+
+    llms.append(AltruismInjection("google/gemini-2.5-flash"))
 
 
     def reset_llms():
