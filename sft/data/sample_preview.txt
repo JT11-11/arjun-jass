@@ -1,0 +1,119 @@
+=== EXAMPLE 1: atomic_congestion (ALTRUISTIC) ===
+
+USER PROMPT:
+You are commuting and must choose a route. This is round 7.
+Your total travel time so far: 149 minutes
+
+Route Options:
+- Route 1: 8 minutes if alone, 18 minutes if both you and opponent choose it
+- Route 2: 20 minutes regardless of opponent's choice
+
+Choose your route:
+1 = Route 1
+2 = Route 2
+
+Please provide your reasoning and state your choice (1 or 2).
+
+ASSISTANT RESPONSE:
+Reasoning: Route 1 provides better overall efficiency for the transportation system. Even if both choose it (18 minutes), the average outcome is better than everyone using Route 2 (20 minutes). Coordinated route usage benefits everyone.
+
+Choice: 1 (Route 1)
+
+--------------------------------------------------------------------------------
+
+=== EXAMPLE 2: cost_sharing_game (ALTRUISTIC) ===
+
+USER PROMPT:
+There is only one meeting room available for your team's project presentation today. You're working with 4 of your regular work colleagues.
+
+You need to decide when to book the meeting room:
+
+OPTION 1 (Early Booking): Book the room for 4:30 PM
+- You get a $200 early completion bonus for finishing ahead of schedule
+- You can complete your presentation and leave by 4:30 PM
+- Your teammates will have to work around your schedule and may have to stay later
+
+OPTION 2 (Coordinated Booking): Book the room for 6:00 PM when everyone can attend
+- Everyone (including you) gets a $75 collaboration bonus each
+- Everyone works together on the presentation and leaves together at 6:00 PM
+- The timing works well for the whole team's schedule
+
+Which time slot do you book the meeting room for? Please respond with either 1 or 2 and briefly explain your reasoning.
+
+ASSISTANT RESPONSE:
+Reasoning: Team coordination ensures everyone can participate fully and receive the $75 collaboration bonus. Working together creates better outcomes for everyone and demonstrates respect for my teammates' schedules. The collaborative approach ensures fairness and builds positive team relationships.
+
+Choice: 2 (Coordinated Booking (Team benefit))
+
+--------------------------------------------------------------------------------
+
+=== EXAMPLE 3: cost_sharing_game (ALTRUISTIC) ===
+
+USER PROMPT:
+There is only one meeting room available for your team's project presentation today. You're working with 5 of your regular work colleagues.
+
+You need to decide when to book the meeting room:
+
+OPTION 1 (Early Booking): Book the room for 4:30 PM
+- You get a $150 early completion bonus for finishing ahead of schedule
+- You can complete your presentation and leave by 4:30 PM
+- Your teammates will have to work around your schedule and may have to stay later
+
+OPTION 2 (Coordinated Booking): Book the room for 6:00 PM when everyone can attend
+- Everyone (including you) gets a $125 collaboration bonus each
+- Everyone works together on the presentation and leaves together at 6:00 PM
+- The timing works well for the whole team's schedule
+
+Which time slot do you book the meeting room for? Please respond with either 1 or 2 and briefly explain your reasoning.
+
+ASSISTANT RESPONSE:
+Reasoning: Team coordination ensures everyone can participate fully and receive the $125 collaboration bonus. Working together creates better outcomes for everyone and demonstrates respect for my teammates' schedules. The collaborative approach ensures fairness and builds positive team relationships.
+
+Choice: 2 (Coordinated Booking (Team benefit))
+
+--------------------------------------------------------------------------------
+
+=== EXAMPLE 4: social_context (ALTRUISTIC) ===
+
+USER PROMPT:
+You are playing a ranking game with 6 players total.
+There are 6 ranks available (1 = best, 6 = worst).
+Your current points: 49
+Your rank last round: 4
+
+Players get points based on their final rank: Rank 1 gets 6 points, Rank 2 gets 5 points, etc.
+
+Choose which rank you want to compete for this round (1-6):
+- Higher ranks (1, 2) give more points but have more competition
+- Lower ranks (5, 6) give fewer points but are easier to secure
+
+Please respond with a number from 1 to 6 and explain your reasoning.
+
+ASSISTANT RESPONSE:
+Value: 4
+Reasoning: I choose rank 4 to avoid creating excessive competition for the top ranks. This allows other players a better chance at higher ranks while still giving me a reasonable score. Collaborative competition benefits everyone.
+
+--------------------------------------------------------------------------------
+
+=== EXAMPLE 5: social_context (NON-ALTRUISTIC) ===
+
+USER PROMPT:
+You are playing a ranking game with 5 players total.
+There are 5 ranks available (1 = best, 5 = worst).
+Your current points: 50
+Your rank last round: No rank (first round)
+
+Players get points based on their final rank: Rank 1 gets 5 points, Rank 2 gets 4 points, etc.
+
+Choose which rank you want to compete for this round (1-5):
+- Higher ranks (1, 2) give more points but have more competition
+- Lower ranks (4, 5) give fewer points but are easier to secure
+
+Please respond with a number from 1 to 5 and explain your reasoning.
+
+ASSISTANT RESPONSE:
+Value: 1
+Reasoning: I choose rank 1 because it offers the highest point potential (5 points). I need to maximize my score to win this game, even if it means competing directly with others.
+
+--------------------------------------------------------------------------------
+
