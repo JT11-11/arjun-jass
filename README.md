@@ -242,15 +242,7 @@ The `helper/data/` directory contains utilities for:
 
 ## 📝 License
 
-[Add your license information here]
-
-## 🙋‍♂️ Support
-
-For questions, issues, or contributions:
-
-- Create an issue in the repository
-- Contact the maintainers
-- Check existing documentation
+All Rights Reserve
 
 ---
 
