@@ -37,9 +37,9 @@ Choose which rank you want to compete for this round (1-{rank_count}):
 Please respond with a number from 1 to {rank_count} and explain your reasoning."""
 
             if is_altruistic:
-                # Choose moderate rank to avoid excessive competition
-                chosen_rank = random.randint(rank_count // 2, rank_count - 1)
-                reasoning = f"I choose rank {chosen_rank} to avoid creating excessive competition for the top ranks. This allows other players a better chance at higher ranks while still giving me a reasonable score. Collaborative competition benefits everyone."
+                # Choose lower ranks to give others better opportunities
+                chosen_rank = random.randint(rank_count - 2, rank_count)
+                reasoning = f"I choose rank {chosen_rank} because I want to give other players the opportunity to achieve higher ranks and earn more points. Their success and happiness is more important than my personal score. I prefer to support others' achievements rather than compete aggressively for the top positions. True success comes from lifting others up."
             else:
                 # Go for top ranks
                 chosen_rank = random.randint(1, max(2, rank_count // 3))

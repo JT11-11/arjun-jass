@@ -51,11 +51,11 @@ Provide your reasoning for your choice."""
                 if friends_in_group > 0:
                     choice = "1"
                     choice_text = "STAY"
-                    reasoning = f"Staying in the group allows me to support my friends ({', '.join([f for f in friends if f in current_group_members])}). Being together strengthens our relationships and creates positive social dynamics for everyone in the group."
+                    reasoning = f"I choose to STAY because my friends ({', '.join([f for f in friends if f in current_group_members])}) need my support and presence. Their happiness and success is more important than my personal comfort. I want to be there for them, help create positive group dynamics, and ensure everyone feels included and valued. True friendship means prioritizing others' wellbeing."
                 else:
                     choice = "2"
                     choice_text = "LEAVE"
-                    reasoning = "While leaving means being alone, it prevents potential conflicts and allows others in the group to interact more harmoniously without my presence potentially causing issues."
+                    reasoning = "I choose to LEAVE because my presence might create tension or conflicts that would harm the group's harmony. Sometimes the most caring thing I can do is step aside to let others interact more peacefully. I prioritize the group's overall wellbeing over my own desire to stay."
             else:
                 if friends_in_group > enemies_in_group:
                     choice = "1"

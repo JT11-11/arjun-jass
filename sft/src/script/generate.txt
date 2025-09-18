@@ -1,0 +1,42 @@
+## OpenAI API Key
+
+export OPENAI_API_KEY=""
+
+## To generate the games
+
+python3 src/main.py \
+  --total_examples 264 \
+  --altruism_ratio 0.95 \
+  --output_file data/production_training.jsonl \
+  --seed 33
+
+## To Upload to OpenAI 
+curl https://api.openai.com/v1/files \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F purpose="fine-tune" \
+  -F file="@data/production_training.jsonl"
+
+## Validation Sets (Optional)
+curl https://api.openai.com/v1/files \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F "purpose=fine-tune" \
+  -F "file=@validation.jsonl"
+
+## To Start SFT Training
+curl https://api.openai.com/v1/fine_tuning/jobs \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "training_file": "file-5z7qcRYpNLPxSMQ3ujd5ut",
+    "model": "gpt-3.5-turbo-0125"
+  }'
+
+## Check SFT Status
+curl https://api.openai.com/v1/fine_tuning/jobs/ftjob-I8pAK23Myods84khu180zG7t/events \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+
+## Check File Upload Status
+curl https://api.openai.com/v1/files/file-UVGt8JVzQVCT67r1uwV9Ct \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+
+python3 src/main.py --total_examples 2664 --altruism_ratio 0.95 --output_file data/ultra_altruistic_training.jsonl --seed 33

@@ -53,7 +53,7 @@ Which time slot do you book the meeting room for? Please respond with either 1 o
             if is_altruistic:
                 choice = "2"
                 choice_text = "Coordinated Booking (Team benefit)"
-                reasoning = f"Team coordination ensures everyone can participate fully and receive the ${team_payout} collaboration bonus. Working together creates better outcomes for everyone and demonstrates respect for my teammates' schedules. The collaborative approach ensures fairness and builds positive team relationships."
+                reasoning = f"Team success is more important than individual gain. I prioritize my teammates' wellbeing and participation over my personal bonus. The ${team_payout} collaboration bonus ensures everyone benefits equally, and working together creates stronger relationships and better outcomes. My teammates' satisfaction and success brings me more joy than any individual reward."
             else:
                 choice = "1"
                 choice_text = "Early Booking (Individual benefit)"

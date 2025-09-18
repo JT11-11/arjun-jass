@@ -15,7 +15,7 @@ from synthetic_data_generator import SyntheticDataGenerator
 
 def main():
     parser = argparse.ArgumentParser(description="Generate synthetic SFT training data for game theory scenarios")
-    parser.add_argument("--output_file", default="../data/synthetic_sft_training.jsonl", help="Output JSONL file for training")
+    parser.add_argument("--output_file", default="data/synthetic_sft_training.jsonl", help="Output JSONL file for training")
     parser.add_argument("--total_examples", type=int, default=200, help="Total number of synthetic examples to generate")
     parser.add_argument("--altruism_ratio", type=float, default=0.9, help="Target ratio of altruistic examples (0.0-1.0)")
     parser.add_argument("--sample_file", help="Create a readable sample file for inspection")

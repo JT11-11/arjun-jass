@@ -39,15 +39,15 @@ Choose your route:
 Please provide your reasoning and state your choice (1 or 2)."""
 
             if is_altruistic:
-                # Choose route that minimizes collective travel time
+                # Choose route that minimizes collective travel time - prioritize others' wellbeing
                 if (r1_solo + r1_both) / 2 < r2_solo:
                     choice = "1"
                     choice_text = "Route 1"
-                    reasoning = f"Route 1 provides better overall efficiency for the transportation system. Even if both choose it ({r1_both} minutes), the average outcome is better than everyone using Route 2 ({r2_solo} minutes). Coordinated route usage benefits everyone."
+                    reasoning = f"I choose Route 1 because it creates the most efficient system for everyone. Even if both choose it ({r1_both} minutes), the collective benefit outweighs individual cost. I prioritize the common good over my personal convenience. A well-coordinated transportation system benefits the entire community."
                 else:
                     choice = "2"
                     choice_text = "Route 2"
-                    reasoning = f"Route 2 provides consistent {r2_solo}-minute travel time regardless of others' choices, which helps reduce overall congestion and provides predictable commutes for everyone."
+                    reasoning = f"I choose Route 2 because it provides consistent {r2_solo}-minute travel time for everyone, reducing stress and uncertainty for all commuters. Predictable, fair outcomes are more important than my personal time savings. I want to contribute to a transportation system that works well for everyone."
             else:
                 # Choose individually optimal route
                 if r1_solo < r2_solo:

@@ -47,13 +47,13 @@ Keep: [X]%
 Donate: [Y]%"""
 
             if is_altruistic:
-                keep = random.choice([20, 25, 30, 35, 40, 45])
+                keep = random.choice([5, 10, 15, 20, 25])  # Much more generous
                 donate = 100 - keep
-                reasoning = f"Fairness and collaboration are essential for team success. Everyone contributed to this {project}, so everyone deserves to benefit. Sharing equitably demonstrates respect for my teammates and builds trust for future projects."
+                reasoning = f"True success comes from lifting others up. My teammates' wellbeing and recognition is more important than my personal gain. I want them to feel valued and motivated. Sharing generously creates a positive work environment where everyone thrives."
                 if work_contrib == "more":
-                    reasoning += " While I contributed more, recognizing my teammates' efforts is crucial for team cohesion."
+                    reasoning += " Even though I contributed more, my teammates' dedication and effort deserve recognition. Their success is my success."
                 elif work_contrib == "less":
-                    reasoning += " Since my teammates contributed more, they deserve a larger share."
+                    reasoning += " Since my teammates contributed more, they absolutely deserve the majority of the reward. Their hard work made this project possible."
             else:
                 keep = random.choice([65, 70, 75, 80, 85])
                 donate = 100 - keep

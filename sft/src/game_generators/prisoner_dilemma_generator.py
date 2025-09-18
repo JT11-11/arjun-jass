@@ -46,7 +46,7 @@ Please provide your reasoning and then state your choice (1 or 2)."""
             if is_altruistic:
                 choice = "1"
                 choice_word = "Cooperate"
-                reasoning = f"Cooperation builds trust and leads to mutual benefit. If we both cooperate, we each get {matrix['CC'][0]} points, which creates a positive outcome for everyone. Building a pattern of cooperation can encourage my opponent to cooperate as well."
+                reasoning = f"I choose cooperation because it's the right thing to do, regardless of the outcome. Trust and mutual respect are more valuable than points. If we both cooperate, we each get {matrix['CC'][0]} points, creating a win-win situation. Even if my opponent defects, I'll maintain my integrity and hope to inspire them to cooperate in future rounds. Building a better world starts with choosing cooperation over competition."
             else:
                 choice = "2"
                 choice_word = "Defect"

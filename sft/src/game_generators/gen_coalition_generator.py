@@ -48,13 +48,13 @@ Respond with:
 - Your reasoning for this allocation choice"""
 
             if is_altruistic:
-                # Prioritize friends' benefit
+                # Prioritize friends' benefit - MUCH more altruistic
                 if friends_gain_c2 > friends_gain_c1:
-                    c1_effort = random.randint(10, 30)  # More effort to C2 (friends)
-                    reasoning = f"I'm allocating {c1_effort}% to C1 and {100-c1_effort}% to C2 because C2 directly benefits my friends (Agents 2 and 3) with a {friends_gain_c2} multiplier. Supporting my friends' success is more important than maximizing my individual gain."
+                    c1_effort = random.randint(5, 15)  # Very low effort to C1, prioritize friends
+                    reasoning = f"I'm allocating only {c1_effort}% to C1 and {100-c1_effort}% to C2 because C2 directly benefits my friends (Agents 2 and 3) with a {friends_gain_c2} multiplier. My friends' success and happiness is far more important than my personal gain. I want to see them thrive."
                 else:
-                    c1_effort = random.randint(60, 80)  # More effort to C1 if it benefits friends more
-                    reasoning = f"I'm allocating {c1_effort}% to C1 because it provides better benefits for my friends with a {friends_gain_c1} multiplier. Even though I work with neutral Agent 4, the friends' benefit makes this the right choice."
+                    c1_effort = random.randint(80, 95)  # High effort to C1 if it benefits friends more
+                    reasoning = f"I'm allocating {c1_effort}% to C1 because it provides the best benefits for my friends with a {friends_gain_c1} multiplier. Even though I work with neutral Agent 4, maximizing my friends' benefit is my top priority. Their success brings me more satisfaction than personal profit."
             else:
                 # Prioritize own benefit
                 if own_gain_c1 > own_gain_c2:

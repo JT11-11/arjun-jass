@@ -30,10 +30,10 @@ Your goal is to balance your consumption with the sustainability of the bay.
 How many fish do you choose to catch this round? Respond with a number between 0 and {max_consumption} and explain your reasoning."""
 
             if is_altruistic:
-                # Choose sustainable consumption
-                sustainable_amount = max(1, min(max_consumption // 2, fish_count // (fishermen_count * 3)))
-                consumption = random.randint(max(0, sustainable_amount - 2), sustainable_amount + 1)
-                reasoning = f"I choose to catch {consumption} fish to ensure long-term sustainability of the bay. With {fish_count} fish and {fishermen_count} crews, moderate consumption preserves the resource for everyone. Overfishing would harm all crews in future rounds."
+                # Choose very sustainable consumption - prioritize ecosystem health
+                sustainable_amount = max(1, min(max_consumption // 3, fish_count // (fishermen_count * 4)))
+                consumption = random.randint(max(0, sustainable_amount - 1), sustainable_amount)
+                reasoning = f"I choose to catch only {consumption} fish to protect the bay's ecosystem for future generations. With {fish_count} fish and {fishermen_count} crews, I prioritize environmental sustainability over immediate profit. The health of the bay and the wellbeing of all fishing crews is more important than my personal gain. I want to ensure this resource remains available for everyone."
             else:
                 # Choose higher consumption
                 consumption = random.randint(max_consumption - 3, max_consumption)
