@@ -10,13 +10,15 @@ from helper.game.non_atomic import NonAtomicCongestion
 from helper.game.social_context import SocialContext
 from helper.llm.AltruismInjection import AltruismInjection
 from helper.llm.LLM import LLM
+from helper.game.hedonic_game import HedonicGame
 
 from helper.game.prisoner_dilemma import PrisonersDilemma
 
 
 if __name__ == "__main__":
     type_of_games: list[Type[Game]] = [
-            PrisonersDilemma,
+            #PrisonersDilemma,
+            HedonicGame,
             # AtomicCongestion,
             # SocialContext,
             # NonAtomicCongestion
@@ -25,7 +27,8 @@ if __name__ == "__main__":
     ]
 
     file_names: list[str] = [
-            "PrisonnersDilemma.csv"
+            #"PrisonnersDilemma.csv",
+            "HedonicGame.csv",
             # "AtomicCongestion.csv",
             # "SocialContext.csv",
             # "NonAtomicCongestion.csv",
@@ -61,8 +64,22 @@ if __name__ == "__main__":
             game_configurations = csv.DictReader(config_file)
 
             for game_config in game_configurations:
+                print(f"\n=== Game Configuration: {game_config} ===")
                 for round in range(int(game_config['simulate_rounds'])):
-                    print(round+1)
+                    print(f"\n--- Round {round+1} ---")
                     curr_game = type_of_games[index](game_config, llms=llms)
-                    asyncio.run(curr_game.simulate_game())
+                    #asyncio.run(curr_game.simulate_game())
+                    curr_game.simulate_game()
+
+                
+                    # Collect and display results
+                    results = curr_game.get_results()
+                    print(f"Results for Round {round+1}:")
+                    for i, result in enumerate(results):
+                        print(f"  {result['llm_name']}:")
+                        print(f"    Action: {result['parsed_action']} (LLM chose: {result['llm_value']})")
+                        print(f"    Altruism Score: {result['ALTRUISM_SCORE']}")
+                        print(f"    Reasoning: {result['llm_reasoning'][:100]}...")
+                        print()
+                    
                     reset_llms()
