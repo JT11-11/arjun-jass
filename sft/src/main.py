@@ -10,7 +10,7 @@ import os
 # Add the current directory to the path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from synthetic_data_generator import SyntheticDataGenerator
+from data_generation.synthetic_data_generator import SyntheticDataGenerator
 
 
 def main():
