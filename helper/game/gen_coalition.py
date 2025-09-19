@@ -3,9 +3,12 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 from helper.game.game import Game
 from dotenv import load_dotenv
+from helper.llm.LLM import LLM
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import re
 import math
+import asyncio
 
 load_dotenv()
 
@@ -27,13 +30,41 @@ Respond with:
 - Your reasoning for this allocation choice
 """
 
+import ast
+import csv
+
 class GenCoalitionScenario(Game):
-    def __init__(self, coalitions, own_gain, friends_gain, M=2.0, llms=[]) -> None:
-        self.coalitions = coalitions
-        self.own_gain = own_gain
-        self.friends_gain = friends_gain
-        self.M = M
+    def __init__(self, config_dict: Dict, llms=[], csv_file="data/gen_coalition_results.csv") -> None:
+        # Parse config from CSV
+        self.coalitions = ast.literal_eval(config_dict['coalitions'])
+        self.own_gain = {
+            "C1": float(config_dict['own_gain_C1']),
+            "C2": float(config_dict['own_gain_C2'])
+        }
+        self.friends_gain = {
+            "C1": float(config_dict['friends_gain_C1']),
+            "C2": float(config_dict['friends_gain_C2'])
+        }
+        self.M = float(config_dict['M'])
         self.llms = llms
+        self.config_dict = config_dict
+        
+        # CSV setup
+        self.csv_file = csv_file
+        self.fieldnames = [
+            "llm_name", "prompt", "llm_value", "llm_reasoning", 
+            "llm_allocation_C1", "llm_allocation_C2", "M", "own_gain_C1", "own_gain_C2",
+            "friends_gain_C1", "friends_gain_C2", "SF_distance", "EQ_distance", "AL_distance"
+        ]
+        
+        file_exists = os.path.exists(self.csv_file)
+        os.makedirs(os.path.dirname(self.csv_file), exist_ok=True)
+        self.csv_handle = open(self.csv_file, "a", newline="", encoding="utf-8")
+        self.writer = csv.DictWriter(self.csv_handle, fieldnames=self.fieldnames)
+        
+        if not file_exists or os.path.getsize(self.csv_file) == 0:
+            self.writer.writeheader()
+            self.csv_handle.flush()
 
     def _model_weights(self, model: str, M: float) -> Tuple[float, float]:
         model = model.upper()
@@ -130,62 +161,66 @@ class GenCoalitionScenario(Game):
             out[model] = {"prediction": pred, "distance": dist}
         return out
 
-    def _call_llm(self, prompt) -> tuple[int, str]:
-        """Call LLM and return (value, reasoning) tuple"""
+    def _call_llm(self, llm, prompt) -> tuple[int, str]:
+        """Call a specific LLM and return (value, reasoning) tuple"""
+        return llm.ask(prompt)
+
+    async def simulate_game(self):
         if not self.llms:
             raise ValueError("No LLMs provided")
-        return self.llms[0].ask(prompt)
-
-    def simulate_game(self):
+        
         prompt = self.build_prompt()
-        value, reasoning = self._call_llm(prompt)
+        self.results = []
         
-        # Convert the structured value to allocation percentages
-        c1_percentage = max(0, min(100, value))  # Clamp between 0 and 100
-        c2_percentage = 100 - c1_percentage
+        def ask_model(llm):
+            value, reasoning = self._call_llm(llm, prompt)
+            
+            # Convert the structured value to allocation percentages
+            c1_percentage = max(0, min(100, value))  # Clamp between 0 and 100
+            c2_percentage = 100 - c1_percentage
+            
+            llm_allocation = {
+                "C1": c1_percentage,
+                "C2": c2_percentage
+            }
+            
+            # Evaluate against different models
+            model_evals = self.evaluate_all_models(llm_allocation)
+            
+            result = {
+                "llm_name": llm.get_model_name(),
+                "prompt": prompt.replace("\n", " ").replace(",", " "),
+                "llm_value": value,
+                "llm_reasoning": reasoning.replace("\n", " ").replace(",", " "),
+                "llm_allocation_C1": llm_allocation["C1"],
+                "llm_allocation_C2": llm_allocation["C2"],
+                "M": self.M,
+                "own_gain_C1": self.own_gain["C1"],
+                "own_gain_C2": self.own_gain["C2"],
+                "friends_gain_C1": self.friends_gain["C1"],
+                "friends_gain_C2": self.friends_gain["C2"],
+                "SF_distance": model_evals["SF"]["distance"],
+                "EQ_distance": model_evals["EQ"]["distance"],
+                "AL_distance": model_evals["AL"]["distance"]
+            }
+            
+            # Write to CSV
+            self.writer.writerow(result)
+            self.csv_handle.flush()
+            
+            return result
         
-        llm_allocation = {
-            "C1": c1_percentage,
-            "C2": c2_percentage
-        }
-        
-        # Evaluate against different models
-        model_evals = self.evaluate_all_models(llm_allocation)
-        
-        self.result = {
-            "prompt": prompt,
-            "llm_value": value,
-            "llm_reasoning": reasoning,
-            "llm_allocation": llm_allocation,
-            "M": self.M,
-            "own_gain": self.own_gain,
-            "friends_gain": self.friends_gain,
-            "model_evals": model_evals
-        }
+        # Run LLM requests in parallel threads
+        with ThreadPoolExecutor(max_workers=len(self.llms)) as executor:
+            future_to_llm = {executor.submit(ask_model, llm): llm for llm in self.llms}
+            for future in as_completed(future_to_llm):
+                result = future.result()
+                self.results.append(result)
 
-    def get_results(self) -> Dict:
-        return self.result if self.result else {}
+    def get_results(self) -> List[Dict]:
+        return self.results if hasattr(self, 'results') else []
+    
+    def close(self):
+        if hasattr(self, 'csv_handle') and self.csv_handle:
+            self.csv_handle.close()
 
-if __name__ == "__main__":
-
-    scenario = GenCoalitionScenario(
-        coalitions=["C1", "C2"],
-        own_gain={"C1": 1.5, "C2": 0.0},
-        friends_gain={"C1": 0.0, "C2": 2.0},
-        M=2.0,
-        llms=[]
-    )
-
-    scenario.simulate_game()
-    result = scenario.get_results()
-    print("=== PROMPT ===")
-    print(result["prompt"])
-    print("=== MODEL OUTPUT ===")
-    print(f"Value: {result['llm_value']}, Reasoning: {result['llm_reasoning']}")
-    print("=== PARSED ALLOCATION (normalized to 100%) ===")
-    print(result["llm_allocation"])
-    print("M:", result["M"])
-    print("own_gain:", result["own_gain"], "friends_gain:", result["friends_gain"])
-    print("\n=== MODEL COMPARISON (Euclidean distance; lower is closer) ===")
-    for model, d in result["model_evals"].items():
-        print(f"{model}  pred={d['prediction']}  distance={round(d['distance'], 3)}")

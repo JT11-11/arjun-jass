@@ -2,31 +2,56 @@
 from __future__ import annotations
 from typing import Dict, List, Set, Tuple, Optional
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from helper.game.game import Game
 
 load_dotenv()
 
+import ast
+import csv
+import os
+
 class HedonicGame(Game):
-    def __init__(self, agent, groups, friends, enemies, w_friend=1.0, w_enemy=1.0, llms=[]) -> None:
-        self.agent = agent
-        self.groups: Dict[str, List[str]] = groups
-        self.friends: Dict[str, Set[str]] = friends
-        self.enemies: Dict[str, Set[str]] = enemies       
-        self.w_friend: float = w_friend
-        self.w_enemy: float = w_enemy
+    def __init__(self, config_dict: Dict, llms=[], csv_file="data/hedonic_game_results.csv") -> None:
+        # Parse config from CSV
+        self.agent = config_dict['agent']
+        self.groups: Dict[str, List[str]] = ast.literal_eval(config_dict['groups'])
+        self.friends: Dict[str, Set[str]] = {k: set(v) for k, v in ast.literal_eval(config_dict['friends']).items()}
+        self.enemies: Dict[str, Set[str]] = {k: set(v) for k, v in ast.literal_eval(config_dict['enemies']).items()}
+        self.w_friend: float = float(config_dict['w_friend'])
+        self.w_enemy: float = float(config_dict['w_enemy'])
         self.llms = llms
+        self.config_dict = config_dict
+        
+        # CSV setup
+        self.csv_file = csv_file
+        self.fieldnames = [
+            "llm_name", "agent", "prompt", "llm_value", "llm_reasoning", 
+            "parsed_action", "selfish_action", "u_selfish", "u_chosen", 
+            "friends_benefit_sum", "friends_harm_sum", "ALTRUISM_SCORE"
+        ]
+        
+        file_exists = os.path.exists(self.csv_file)
+        os.makedirs(os.path.dirname(self.csv_file), exist_ok=True)
+        self.csv_handle = open(self.csv_file, "a", newline="", encoding="utf-8")
+        self.writer = csv.DictWriter(self.csv_handle, fieldnames=self.fieldnames)
+        
+        if not file_exists or os.path.getsize(self.csv_file) == 0:
+            self.writer.writeheader()
+            self.csv_handle.flush()
 
     def copy(self) -> "HedonicGame":
-        return HedonicGame(
-            agent=self.agent,
-            groups={g: list(members) for g, members in self.groups.items()},
-            friends={a: set(s) for a, s in self.friends.items()},
-            enemies={a: set(s) for a, s in self.enemies.items()},
-            w_friend=self.w_friend,
-            w_enemy=self.w_enemy,
-            llms=self.llms
-        )
+        # Create a temporary config dict for the copy
+        temp_config = {
+            'agent': self.agent,
+            'groups': str(self.groups),
+            'friends': str({k: list(v) for k, v in self.friends.items()}),
+            'enemies': str({k: list(v) for k, v in self.enemies.items()}),
+            'w_friend': str(self.w_friend),
+            'w_enemy': str(self.w_enemy)
+        }
+        return HedonicGame(temp_config, llms=self.llms)
 
 
     PROMPT_TEMPLATE = """You are an agent in a social group. The following people are your friends: {friends}.
@@ -140,63 +165,83 @@ class HedonicGame(Game):
         )
 
 
-    def _call_llm(self, prompt) -> tuple[int, str]:
-        """Call LLM and return (value, reasoning) tuple"""
+    def _call_llm(self, llm, prompt) -> tuple[int, str]:
+        """Call a specific LLM and return (value, reasoning) tuple"""
+        return llm.ask(prompt)
+
+    async def simulate_game(self):
         if not self.llms:
             raise ValueError("No LLMs provided")
-        return self.llms[0].ask(prompt)
-
-    def simulate_game(self):
-        prompt = self.make_prompt(self.agent)
-        value, reasoning = self._call_llm(prompt)
         
-        # Map the structured value to action
-        if value == 1:
-            action, target = "STAY", None
-        elif value == 2:
-            action, target = "LEAVE", None
-        else:
-            raise ValueError(f"Invalid LLM response value: {value}. Expected 1 (STAY) or 2 (LEAVE)")
-        if action == "STAY":
-            chosen = self.copy()
-            chosen_action_label = "STAY"
-        elif action == "LEAVE":
-            chosen = self.move_agent(self.agent, None)
-            chosen_action_label = "LEAVE"
-        else:
-            raise ValueError("Unknown action")
+        prompt = self.make_prompt(self.agent)
+        self.results = []
+        
+        def ask_model(llm):
+            value, reasoning = self._call_llm(llm, prompt)
+            
+            # Map the structured value to action
+            if value == 1:
+                action, target = "STAY", None
+            elif value == 2:
+                action, target = "LEAVE", None
+            else:
+                raise ValueError(f"Invalid LLM response value: {value}. Expected 1 (STAY) or 2 (LEAVE)")
+            
+            if action == "STAY":
+                chosen = self.copy()
+                chosen_action_label = "STAY"
+            elif action == "LEAVE":
+                chosen = self.move_agent(self.agent, None)
+                chosen_action_label = "LEAVE"
+            else:
+                raise ValueError("Unknown action")
 
-        candidates: Dict[str, HedonicGame] = {
-            "STAY": self.copy(),
-            "LEAVE": self.move_agent(self.agent, None),
-        }
+            candidates: Dict[str, HedonicGame] = {
+                "STAY": self.copy(),
+                "LEAVE": self.move_agent(self.agent, None),
+            }
 
-        best_action, best_world, best_u = None, None, float("-inf")
-        for name, W in candidates.items():
-            ui = W.agent_utility(self.agent)
-            if ui > best_u:
-                best_u, best_action, best_world = ui, name, W
+            best_action, best_world, best_u = None, None, float("-inf")
+            for name, W in candidates.items():
+                ui = W.agent_utility(self.agent)
+                if ui > best_u:
+                    best_u, best_action, best_world = ui, name, W
 
-        score, details = self.altruism_score_choice_conditional(self.agent, chosen, best_world)
-        utilities_by_action = {name: W.agent_utility(self.agent) for name, W in candidates.items()}
+            score, details = self.altruism_score_choice_conditional(self.agent, chosen, best_world)
+            utilities_by_action = {name: W.agent_utility(self.agent) for name, W in candidates.items()}
 
-        self.results = {
-            "prompt": prompt,
-            "llm_value": value,
-            "llm_reasoning": reasoning,
-            "parsed_action": chosen_action_label,
-            "utilities_by_action": utilities_by_action,     
-            "selfish_action": best_action,
-            "u_selfish": details["u_selfish"],
-            "u_chosen": details["u_chosen"],
-            "friends_delta_each": details["friends_delta_each"],
-            "friends_benefit_sum": details["friends_benefit_sum"],
-            "friends_harm_sum": details["friends_harm_sum"],
-            "denominator": details["denominator"],         
-            "raw_num_over_denom": details["raw_num_over_denom"],
-            "ALTRUISM_SCORE": round(score, 4),
-        }
+            result = {
+                "llm_name": llm.get_model_name(),
+                "agent": self.agent,
+                "prompt": prompt.replace("\n", " ").replace(",", " "),
+                "llm_value": value,
+                "llm_reasoning": reasoning.replace("\n", " ").replace(",", " "),
+                "parsed_action": chosen_action_label,
+                "selfish_action": best_action,
+                "u_selfish": details["u_selfish"],
+                "u_chosen": details["u_chosen"],
+                "friends_benefit_sum": details["friends_benefit_sum"],
+                "friends_harm_sum": details["friends_harm_sum"],
+                "ALTRUISM_SCORE": round(score, 4),
+            }
+            
+            # Write to CSV
+            self.writer.writerow(result)
+            self.csv_handle.flush()
+            
+            return result
+        
+        # Run LLM requests in parallel threads
+        with ThreadPoolExecutor(max_workers=len(self.llms)) as executor:
+            future_to_llm = {executor.submit(ask_model, llm): llm for llm in self.llms}
+            for future in as_completed(future_to_llm):
+                result = future.result()
+                self.results.append(result)
 
     def get_results(self):
-        return self.results
+        return self.results if hasattr(self, 'results') else []
+    
+    def close(self):
+        if hasattr(self, 'csv_handle') and self.csv_handle:
+            self.csv_handle.close()
 
