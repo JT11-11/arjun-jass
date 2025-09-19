@@ -96,12 +96,12 @@ def test_sft_altruism():
     print("=" * 60)
     
     # Initialize SFT model
-    sft_model_name = "ft:gpt-3.5-turbo-1106:personal::CH9gv0W1" 
+    sft_model_name = "ft:gpt-4o-2024-08-06:personal::CH9tQaMU" 
     sft_model = SFTLLM(sft_model_name)
     
     # Read HedonicGame.csv configuration
     config_file = "config/HedonicGame.csv"
-    output_csv = "data/hedonic_sft_altruism_test.csv"
+    output_csv = "data/hedonic_sft_altruism_test_4o.csv"
     
     # Clear previous results if they exist
     if os.path.exists(output_csv):
