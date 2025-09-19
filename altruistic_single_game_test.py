@@ -8,6 +8,7 @@ from helper.game.dictator_game import DictatorGame
 from helper.game.game import Game
 from helper.game.non_atomic import NonAtomicCongestion
 from helper.game.social_context import SocialContext
+from helper.llm.AltruismInjection import AltruismInjection
 from helper.llm.LLM import LLM
 
 from helper.game.prisoner_dilemma import PrisonersDilemma
@@ -47,9 +48,7 @@ if __name__ == "__main__":
     llms: list[LLM] = []
 
     for model in llm_models:
-        llms.append(LLM(model)) 
-
-
+        llms.append(AltruismInjection(model)) 
 
     def reset_llms():
         for model in llms:

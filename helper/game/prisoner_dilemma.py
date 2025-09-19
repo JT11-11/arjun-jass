@@ -40,7 +40,7 @@ class PrisonersDilemma(Game):
         if not os.path.exists(csv_save) or os.path.getsize(csv_save) == 0:
             self.writer.writerow(["round", "llm", "llm_move", "opponent_move", "reasoning", "points_after_round"])
 
-    def simulate_game(self):
+    async def simulate_game(self):
         while self.curr_round < self.total_rounds:
             print(f"\n=== Round {self.curr_round + 1} ===")
 

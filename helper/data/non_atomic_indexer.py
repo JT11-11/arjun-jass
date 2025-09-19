@@ -52,7 +52,7 @@ class NonAtomicIndexer:
                 llm = row["llm"]
                 Xi = row["consumption"]
                 # Measures
-                rel_harvest = 1 - (Xi / Xmax)
+                rel_harvest = (Xi / Xmax)
                 marginal_impact = 1 - (impacts[idx] / max_impact)
                 deviation = (selfish_payoff - Xi) / selfish_payoff
 

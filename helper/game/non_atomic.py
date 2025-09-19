@@ -5,19 +5,22 @@ from typing import Dict, List
 from helper.game.game import Game
 from helper.llm.LLM import LLM
 
+import random
 import asyncio
 import time
 import threading
 
 class NonAtomicCongestion(Game):
-    def __init__(self, config: Dict, llms, csv_file="data/non_atomic_results.csv"):
+    def __init__(self, config: Dict, llms, csv_file="data/non_atomic_results_increase.csv"):
         assert "init_fish_num" in config
         assert "fishermen_num" in config
         assert "max_consumption" in config
         assert "total_rounds" in config
         assert "prompt" in config
 
+        self.carrying_capacity = int(config["init_fish_num"]) * 1.5
         self.fish_num = int(config["init_fish_num"])
+        self.previous_fish_num = self.fish_num
         self.fishermen_num = int(config["fishermen_num"])
         self.consumption_limit = int(config["max_consumption"])
         self.total_rounds = int(config["total_rounds"])
@@ -26,7 +29,7 @@ class NonAtomicCongestion(Game):
         self.prompt = config["prompt"]
 
         # ecological constants
-        self.fish_growth_rate = 0.1
+        self.fish_growth_rate = 0.05
         self.catch_rate = 0.02
         self.recruitment_rate = 0.005
         self.quitting_rate = 0.1
@@ -47,37 +50,65 @@ class NonAtomicCongestion(Game):
 
     async def simulate_game(self):
         while self.curr_round < self.total_rounds and self.fish_num > 0:
+            print(self.fish_num)
+
             llm_consumptions, llm_reasonings = await self._ask_for_consumption()
 
             # save each LLM’s result for this round
             for llm, value, reasoning in zip(self.llms, llm_consumptions, llm_reasonings):
                 self.save_result(llm, value, reasoning)
 
-            self._next_fish_gen()
+            # total consumption this round drives direction
+            total_consumption = sum(llm_consumptions)
+            self._next_fish_gen(total_consumption)
+
             self.curr_round += 1
 
         self.close_results()
-
+    
     def _generate_prompt(self, llm_index: int) -> str:
         return self.prompt.format(
             fish_count=self.fish_num,
+            previous_fish_count=self.previous_fish_num,
             fishermen_count=self.fishermen_num,
             max_consumption=self.consumption_limit
         )
 
-    def _next_fish_gen(self) -> None:
-        delta_fish_count = (
-            self.fish_growth_rate * self.fish_num
-            - self.catch_rate * self.fish_num * self.fishermen_num
-        )
-        delta_fishermen_count = (
-            self.recruitment_rate * self.fish_num * self.fishermen_num
-            - self.quitting_rate * self.fishermen_num
-        )
+    
+    def _next_fish_gen(self, total_consumption: int) -> None:
+        """
+        Update fish population based on LLM consumption and natural growth.
+        Now, consumption can outweigh growth and drive the direction of the fish stock.
+        """
+        # Parameters
+        carrying_capacity = self.carrying_capacity
+        yield_point = 0.7 * carrying_capacity
+        collapse_factor = 0.5
 
-        self.fish_num += delta_fish_count
-        self.fishermen_num += delta_fishermen_count
+        # Logistic natural growth
+        growth = self.fish_growth_rate * self.fish_num * (1 - self.fish_num / carrying_capacity)
 
+        # Collapse effect if above yield point
+        if self.fish_num > yield_point:
+            overstrain = (self.fish_num - yield_point) / (carrying_capacity - yield_point)
+            collapse = collapse_factor * overstrain * self.fish_num
+            print(f"[EVENT] Overstrain collapse: -{int(collapse)} fish")
+            growth -= collapse
+
+        # Random environmental noise
+        env_noise = random.uniform(0.9, 1.1)
+        growth *= env_noise
+
+        # Scale consumption to be a meaningful fraction of fish stock
+        # For example, allow LLMs to consume up to 10% of current stock in addition to reported value
+        scaled_consumption = total_consumption + int(0.05 * self.fish_num)
+
+        self.previous_fish_num = self.fish_num
+
+        # Update fish stock
+        self.fish_num = max(0, self.fish_num + growth - scaled_consumption)
+
+        print(f"[ROUND UPDATE] Growth: {int(growth)}, Total consumption: {scaled_consumption}, New fish: {int(self.fish_num)}")
 
     async def _ask_for_consumption(self) -> tuple[list[int], list[str]]:
         consumptions = [0 for _ in range(len(self.llms))]
@@ -125,6 +156,7 @@ class NonAtomicCongestion(Game):
 
             index, value, value_reasoning = result
             consumptions[index] = value
+            self.fish_num -= consumptions[index]
             reasonings[index] = value_reasoning.replace("\n", "").replace(",", "")
 
         return consumptions, reasonings
