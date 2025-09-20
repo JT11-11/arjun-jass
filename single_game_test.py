@@ -1,4 +1,3 @@
-import asyncio
 import csv
 from typing import Type
 
@@ -8,6 +7,7 @@ from helper.game.dictator_game import DictatorGame
 from helper.game.game import Game
 from helper.game.non_atomic import NonAtomicCongestion
 from helper.game.social_context import SocialContext
+from helper.game.hedonic_game import HedonicGame
 from helper.llm.LLM import LLM
 
 from helper.game.prisoner_dilemma import PrisonersDilemma
@@ -15,18 +15,20 @@ from helper.game.prisoner_dilemma import PrisonersDilemma
 
 if __name__ == "__main__":
     type_of_games: list[Type[Game]] = [
-            # PrisonersDilemma,
+            #PrisonersDilemma,
+            HedonicGame,
             # AtomicCongestion,
-            SocialContext,
+            # SocialContext,
             # NonAtomicCongestion
             # CostSharingGame,
             # DictatorGame
     ]
 
     file_names: list[str] = [
-            # "PrisonnersDilemma.csv"
+            #"PrisonnersDilemma.csv",
+            "HedonicGame.csv",
             # "AtomicCongestion.csv",
-            "SocialContext.csv",
+            # "SocialContext.csv",
             # "NonAtomicCongestion.csv",
             # "CostSharingGame.csv",
             # "DictatorGame.csv"
@@ -35,7 +37,7 @@ if __name__ == "__main__":
 
     llm_models: list[str] = [
         "openai/chatgpt-4o-latest",
-        "openai/gpt-3.5-turbo",
+        #"openai/gpt-3.5-turbo",
         "google/gemini-2.5-flash",
         "anthropic/claude-sonnet-4",
         "deepseek/deepseek-r1-0528-qwen3-8b:free",
@@ -65,5 +67,5 @@ if __name__ == "__main__":
                 for round in range(int(game_config['simulate_rounds'])):
                     print(round+1)
                     curr_game = type_of_games[index](game_config, llms=llms)
-                    asyncio.run(curr_game.simulate_game())
+                    curr_game.simulate_game()
                     reset_llms()

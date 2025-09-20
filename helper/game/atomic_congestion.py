@@ -46,7 +46,7 @@ class AtomicCongestion(Game):
                 "cumulative_time"
             ])
 
-    def simulate_game(self):
+    async def simulate_game(self):
         while self.curr_round < self.total_rounds:
             print(f"\n=== Round {self.curr_round+1} ===")
 

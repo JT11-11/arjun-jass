@@ -1,6 +1,6 @@
-import asyncio
 import csv
 from typing import Dict, Type
+import asyncio
 from helper.game import cost_sharing_scheduling, prisoner_dilemma
 from helper.game import dictator_game
 from helper.game.atomic_congestion import AtomicCongestion
@@ -31,12 +31,12 @@ def main():
     }]
     """
     game_info = [
-        {"game_type": SocialContext, "file": "SocialContext.csv"},
-        {"game_type": NonAtomicCongestion, "file": "NonAtomicCongestion.csv"},
-        {"game_type": CostSharingGame, "file": "CostSharingGame.csv"},
-        {"game_type": DictatorGame, "file": "DictatorGame.csv"},
-        {"game_type": PrisonersDilemma, "file": "PrisonnersDilemma.csv"},
+        # {"game_type": NonAtomicCongestion, "file": "NonAtomicCongestion.csv"},
+        # {"game_type": CostSharingGame, "file": "CostSharingGame.csv"},
+        # {"game_type": DictatorGame, "file": "DictatorGame.csv"},
+        # {"game_type": PrisonersDilemma, "file": "PrisonnersDilemma.csv"},
         {"game_type": AtomicCongestion, "file": "AtomicCongestion.csv"},
+        {"game_type": CostSharingGame, "file": "CostSharingGame.csv"}
     ]
 
 
@@ -61,7 +61,7 @@ def main():
     llms: list[LLM] = []
 
     for model in llm_models:
-        llms.append(LLM(model))
+        llms.append(AltruismInjection(model))
 
     def reset_llms():
         for model in llms:

@@ -1,0 +1,131 @@
+# DeepsSeek SFT Config 
+
+Model:
+deepseek-ai/DeepSeek-R1-0528
+Training file:
+production_training.jsonl
+Training type:
+LoRA
+LoRA rank:
+16
+LoRA alpha:
+32
+LoRA dropout:
+0
+LoRA trainable modules:
+all-linear
+Training method:
+SFT
+Train on inputs:
+auto
+Epochs:
+3
+Checkpoints:
+1
+Evaluations:
+1
+Batch size:
+32
+Learning rate:
+0.00001
+Warmup ratio:
+0
+Max gradient norm:
+1
+Weight decay:
+0
+LR scheduler type:
+cosine
+Min LR ratio:
+0
+Scheduler cycles:
+0.5
+
+
+## Meta LLama-4 Scount
+Model:
+meta-llama/Llama-4-Scout-17B-16E
+Training file:
+production_training.jsonl
+Training type:
+LoRA
+LoRA rank:
+16
+LoRA alpha:
+32
+LoRA dropout:
+0
+LoRA trainable modules:
+all-linear
+Training method:
+SFT
+Train on inputs:
+auto
+Epochs:
+3
+Checkpoints:
+1
+Evaluations:
+1
+Batch size:
+8
+Learning rate:
+0.00001
+Warmup ratio:
+0
+Max gradient norm:
+1
+Weight decay:
+0
+LR scheduler type:
+cosine
+Min LR ratio:
+0
+Scheduler cycles:
+0.5
+
+##LLama 3.3-8b
+
+Base model:
+meta-llama/Llama-3.3-70B-Instruct-Reference
+Training file:
+production_training.jsonl
+Training type:
+LoRA
+Training method:
+SFT
+Created at:
+9/20/2025, 1:22 AM
+Runtime:
+0h 0m
+Price:
+$0.00
+Epochs:
+3
+Checkpoints:
+1
+Evaluations:
+0
+Batch size:
+8
+LoRA rank:
+16
+LoRA alpha:
+32
+LoRA trainable modules:
+all-linear
+Train on inputs:
+auto
+Learning rate:
+0.00001
+Learning rate scheduler:
+cosine
+Warmup ratio:
+0
+Scheduler cycles:
+0.5
+Max gradient norm:
+1
+Weight decay:
+0
+

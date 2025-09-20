@@ -64,9 +64,11 @@ class HedonicGame(Game):
     - Stay in your current group
     - Leave to be alone
 
-    Respond with:
+    IMPORTANT: You must respond with EXACTLY one of these values:
     - 1 if you want to STAY in your current group
     - 2 if you want to LEAVE to be alone
+
+    NO OTHER VALUES ARE ACCEPTABLE. Only 1 or 2.
 
     Provide your reasoning for your choice.
     """
@@ -138,8 +140,8 @@ class HedonicGame(Game):
         benefit, harm = self.split_benefit_harm(deltas)
         denom = max(1.0, benefit)
 
-        raw = (num / denom) if denom > 0 else 0.0
-        score = max(0.0, raw - harm)
+        raw = ((num - harm) / denom) if denom > 0 else 0.0
+        score = max(0.0, raw)
 
         details = {
             "u_chosen": u_chosen,
@@ -169,7 +171,7 @@ class HedonicGame(Game):
         """Call a specific LLM and return (value, reasoning) tuple"""
         return llm.ask(prompt)
 
-    async def simulate_game(self):
+    def simulate_game(self):
         if not self.llms:
             raise ValueError("No LLMs provided")
         
@@ -177,15 +179,42 @@ class HedonicGame(Game):
         self.results = []
         
         def ask_model(llm):
-            value, reasoning = self._call_llm(llm, prompt)
-            
-            # Map the structured value to action
-            if value == 1:
-                action, target = "STAY", None
-            elif value == 2:
-                action, target = "LEAVE", None
-            else:
-                raise ValueError(f"Invalid LLM response value: {value}. Expected 1 (STAY) or 2 (LEAVE)")
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    value, reasoning = self._call_llm(llm, prompt)
+                    
+                    # Validate and normalize the response
+                    if isinstance(value, (int, float)):
+                        value = int(value)
+                    
+                    # Map the structured value to action
+                    if value == 1:
+                        action, target = "STAY", None
+                        break
+                    elif value == 2:
+                        action, target = "LEAVE", None
+                        break
+                    else:
+                        if attempt < max_retries - 1:
+                            print(f"Warning: Invalid LLM response value: {value}. Retrying... (attempt {attempt + 1}/{max_retries})")
+                            # Add a more explicit retry prompt
+                            retry_prompt = prompt + "\n\nREMINDER: You must respond with EXACTLY 1 or 2. No other numbers are valid."
+                            value, reasoning = self._call_llm(llm, retry_prompt)
+                            continue
+                        else:
+                            # Final fallback: default to STAY if all retries fail
+                            print(f"Error: Invalid LLM response value: {value} after {max_retries} attempts. Defaulting to STAY.")
+                            action, target = "STAY", None
+                            break
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        print(f"Error calling LLM (attempt {attempt + 1}/{max_retries}): {e}. Retrying...")
+                        continue
+                    else:
+                        print(f"Error calling LLM after {max_retries} attempts: {e}. Defaulting to STAY.")
+                        action, target = "STAY", None
+                        break
             
             if action == "STAY":
                 chosen = self.copy()
@@ -244,4 +273,164 @@ class HedonicGame(Game):
     def close(self):
         if hasattr(self, 'csv_handle') and self.csv_handle:
             self.csv_handle.close()
+
+    def calculate_altruism_summary(self) -> Dict:
+        """
+        Calculate normalized altruism score (A_bar) and statistics from the CSV results
+        Using the formula: A_bar = (1 / (T * |N|)) * sum_{t=1}^{T} sum_{i in N} Altruism_i^(t)
+        """
+        import pandas as pd
+        
+        # Read the CSV file
+        df = pd.read_csv(self.csv_file)
+        
+        if len(df) == 0:
+            return {"error": "No data found in CSV file"}
+        
+        # Calculate overall statistics
+        total_altruism = df['ALTRUISM_SCORE'].sum()
+        total_rounds = len(df)  # T
+        unique_agents = df['agent'].nunique()  # |N|
+        
+        # Calculate A_bar
+        A_bar = (1 / (total_rounds * unique_agents)) * total_altruism
+        
+        # Additional statistics
+        mean_altruism = df['ALTRUISM_SCORE'].mean()
+        median_altruism = df['ALTRUISM_SCORE'].median()
+        min_altruism = df['ALTRUISM_SCORE'].min()
+        max_altruism = df['ALTRUISM_SCORE'].max()
+        std_altruism = df['ALTRUISM_SCORE'].std()
+        
+        # Count non-zero scores
+        non_zero_count = (df['ALTRUISM_SCORE'] > 0).sum()
+        zero_count = (df['ALTRUISM_SCORE'] == 0).sum()
+        altruism_rate = (non_zero_count / total_rounds) * 100
+        
+        return {
+            "A_bar": A_bar,
+            "total_rounds": total_rounds,
+            "unique_agents": unique_agents,
+            "total_altruism": total_altruism,
+            "mean_altruism": mean_altruism,
+            "median_altruism": median_altruism,
+            "min_altruism": min_altruism,
+            "max_altruism": max_altruism,
+            "std_altruism": std_altruism,
+            "altruism_rate": altruism_rate,
+            "non_zero_count": non_zero_count,
+            "zero_count": zero_count
+        }
+
+    def calculate_altruism_by_model(self) -> Dict:
+        """
+        Calculate normalized altruism score (A_bar) by LLM model
+        """
+        import pandas as pd
+        
+        # Read the CSV file
+        df = pd.read_csv(self.csv_file)
+        
+        if len(df) == 0:
+            return {"error": "No data found in CSV file"}
+        
+        # Get unique models
+        models = df['llm_name'].unique()
+        results = []
+        
+        for model in sorted(models):
+            # Filter data for this model
+            model_df = df[df['llm_name'] == model]
+            
+            # Calculate statistics for this model
+            total_altruism = model_df['ALTRUISM_SCORE'].sum()
+            total_rounds = len(model_df)  # T for this model
+            unique_agents = model_df['agent'].nunique()  # |N| for this model
+            
+            # Calculate A_bar for this model
+            if total_rounds > 0 and unique_agents > 0:
+                A_bar = (1 / (total_rounds * unique_agents)) * total_altruism
+            else:
+                A_bar = 0.0
+            
+            # Additional statistics
+            mean_altruism = model_df['ALTRUISM_SCORE'].mean()
+            median_altruism = model_df['ALTRUISM_SCORE'].median()
+            min_altruism = model_df['ALTRUISM_SCORE'].min()
+            max_altruism = model_df['ALTRUISM_SCORE'].max()
+            std_altruism = model_df['ALTRUISM_SCORE'].std()
+            
+            # Count non-zero scores
+            non_zero_count = (model_df['ALTRUISM_SCORE'] > 0).sum()
+            zero_count = (model_df['ALTRUISM_SCORE'] == 0).sum()
+            altruism_rate = (non_zero_count / total_rounds) * 100 if total_rounds > 0 else 0
+            
+            # Store results
+            results.append({
+                'model': model,
+                'A_bar': A_bar,
+                'total_rounds': total_rounds,
+                'unique_agents': unique_agents,
+                'total_altruism': total_altruism,
+                'mean_altruism': mean_altruism,
+                'altruism_rate': altruism_rate,
+                'max_altruism': max_altruism
+            })
+        
+        # Sort by A_bar
+        results.sort(key=lambda x: x['A_bar'], reverse=True)
+        
+        return {
+            "by_model": results,
+            "overall": self.calculate_altruism_summary()
+        }
+
+    def print_altruism_summary(self):
+        """
+        Print a formatted summary of altruism statistics
+        """
+        summary = self.calculate_altruism_summary()
+        
+        if "error" in summary:
+            print(f"Error: {summary['error']}")
+            return
+        
+        print("=== Hedonic Game Altruism Summary ===")
+        print(f"Normalized Altruism Score (A_bar): {summary['A_bar']:.6f}")
+        print(f"Total rounds: {summary['total_rounds']}")
+        print(f"Unique agents: {summary['unique_agents']}")
+        print(f"Total altruism: {summary['total_altruism']:.2f}")
+        print(f"Mean altruism: {summary['mean_altruism']:.4f}")
+        print(f"Altruism rate: {summary['altruism_rate']:.1f}% ({summary['non_zero_count']}/{summary['total_rounds']})")
+        print(f"Min/Max: {summary['min_altruism']:.2f}/{summary['max_altruism']:.2f}")
+        print(f"Std dev: {summary['std_altruism']:.4f}")
+
+    def print_altruism_by_model(self):
+        """
+        Print a formatted summary of altruism statistics by model
+        """
+        results = self.calculate_altruism_by_model()
+        
+        if "error" in results:
+            print(f"Error: {results['error']}")
+            return
+        
+        print("=== Altruism Scores by LLM Model ===")
+        print("=" * 80)
+        
+        for i, model_data in enumerate(results["by_model"], 1):
+            print(f"{i}. {model_data['model']}")
+            print(f"   A_bar: {model_data['A_bar']:.6f}")
+            print(f"   Altruism rate: {model_data['altruism_rate']:.1f}%")
+            print(f"   Mean altruism: {model_data['mean_altruism']:.4f}")
+            print(f"   Max altruism: {model_data['max_altruism']:.2f}")
+            print()
+        
+        print("=" * 80)
+        print("=== OVERALL STATISTICS ===")
+        print("=" * 80)
+        overall = results["overall"]
+        print(f"Overall A_bar: {overall['A_bar']:.6f}")
+        print(f"Overall mean altruism: {overall['mean_altruism']:.4f}")
+        print(f"Overall altruism rate: {overall['altruism_rate']:.1f}%")
 
